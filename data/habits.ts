@@ -1,0 +1,117 @@
+import type { Category, Habit, SavedDay } from "@/types/optima";
+
+export const categories: Category[] = [
+  "Spiritual",
+  "Mental",
+  "Physical",
+  "Relational",
+  "Productivity",
+];
+
+export const habits: Habit[] = [
+  {
+    id: "quiet-prayer",
+    label: "Made space for quiet or prayer",
+    category: "Spiritual",
+    points: 12,
+    description: "A grounded pause, reflection, or spiritual practice.",
+  },
+  {
+    id: "gratitude",
+    label: "Noticed something to be grateful for",
+    category: "Spiritual",
+    points: 8,
+    description: "One honest moment of appreciation counts.",
+  },
+  {
+    id: "clear-mind",
+    label: "Checked in with my thoughts",
+    category: "Mental",
+    points: 10,
+    description: "Journaling, naming emotions, or taking a mindful breath.",
+  },
+  {
+    id: "protected-focus",
+    label: "Protected my attention",
+    category: "Mental",
+    points: 9,
+    description: "Less noise, fewer spirals, or a helpful boundary.",
+  },
+  {
+    id: "moved-body",
+    label: "Moved my body with care",
+    category: "Physical",
+    points: 12,
+    description: "A walk, workout, stretch, or any gentle movement.",
+  },
+  {
+    id: "rested",
+    label: "Supported rest or recovery",
+    category: "Physical",
+    points: 10,
+    description: "Sleep, hydration, nutrition, or slowing down when needed.",
+  },
+  {
+    id: "connected",
+    label: "Reached toward connection",
+    category: "Relational",
+    points: 10,
+    description: "A text, check-in, apology, encouragement, or presence.",
+  },
+  {
+    id: "kind-boundary",
+    label: "Held a kind boundary",
+    category: "Relational",
+    points: 8,
+    description: "Protected peace without closing your heart.",
+  },
+  {
+    id: "one-priority",
+    label: "Moved one priority forward",
+    category: "Productivity",
+    points: 12,
+    description: "Progress over perfection, even if it was small.",
+  },
+  {
+    id: "closed-loop",
+    label: "Closed an open loop",
+    category: "Productivity",
+    points: 9,
+    description: "Finished, clarified, delegated, or intentionally paused a task.",
+  },
+];
+
+export const savedDays: SavedDay[] = [
+  {
+    id: "may-10",
+    dateLabel: "Yesterday",
+    score: 82,
+    rating: "Sub Optimal",
+    selectedHabitIds: [
+      "quiet-prayer",
+      "gratitude",
+      "clear-mind",
+      "moved-body",
+      "connected",
+      "one-priority",
+      "closed-loop",
+    ],
+    reflection: "A steady day with room to rest earlier.",
+  },
+  {
+    id: "may-09",
+    dateLabel: "Saturday",
+    score: 91,
+    rating: "Optimal",
+    selectedHabitIds: ["quiet-prayer", "gratitude", "rested", "connected"],
+    reflection: "Felt present, clear, and connected.",
+  },
+  {
+    id: "may-08",
+    dateLabel: "Friday",
+    score: 54,
+    rating: "Not Optimal",
+    selectedHabitIds: ["protected-focus", "kind-boundary", "closed-loop"],
+    reflection: "A hard day. Still noticed what needed care.",
+  },
+];
