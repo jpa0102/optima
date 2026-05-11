@@ -86,6 +86,13 @@ export default function Home() {
                 <p className="text-sm leading-6 text-white/60">
                   What is one thing your day is asking you to notice without judging yourself for it?
                 </p>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("check-in")}
+                  className="mt-5 w-full rounded-full bg-white px-5 py-3 text-sm font-semibold text-zinc-950 shadow-lg shadow-black/25 transition hover:bg-emerald-100"
+                >
+                  Continue check-in
+                </button>
               </ReflectionCard>
             </>
           ) : null}
@@ -117,7 +124,10 @@ export default function Home() {
           ) : null}
 
           {activeTab === "history" ? (
-            <ReflectionCard title="Recent days" eyebrow="Pattern view">
+            <ReflectionCard title="Weekly rhythm" eyebrow="History">
+              <p className="mb-4 text-sm leading-6 text-white/58">
+                A soft look at recent days — not a verdict, just a pattern you can learn from.
+              </p>
               <div className="space-y-3">
                 {savedDays.map((day) => (
                   <article key={day.id} className="rounded-3xl border border-white/10 bg-white/[0.06] p-4">
