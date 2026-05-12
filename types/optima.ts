@@ -20,6 +20,14 @@ export type OnboardingQuestionId =
 
 export type OnboardingAnswers = Partial<Record<OnboardingQuestionId, string>>;
 
+export type OnboardingQuestion = {
+  id: OnboardingQuestionId;
+  eyebrow: string;
+  question: string;
+  companionMessage: string;
+  options: string[];
+};
+
 export type Habit = {
   id: string;
   label: string;
@@ -65,3 +73,5 @@ export type SavedDay = {
   drainsLoggedCount: number;
   reflection: string;
 };
+
+export type AppTab = "home" | "check-in" | "history";
