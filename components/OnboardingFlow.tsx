@@ -109,14 +109,15 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.22),_transparent_34%),radial-gradient(circle_at_top_right,_rgba(124,58,237,0.2),_transparent_30%),linear-gradient(180deg,_#101014_0%,_#07070a_48%,_#020203_100%)]" />
       <div className="relative mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-4 py-6">
         <motion.div {...screenMotion} className="space-y-5">
-          <Companion
-            mood="steady"
-            message={
-              isSummary
-                ? "I see a few clear focus areas. Nothing here is a label — it’s a starting point."
-                : currentQuestion.companionMessage
-            }
-          />
+          <Companion mood="steady" />
+
+<div className="mt-4 rounded-3xl border border-white/10 bg-white/[0.06] p-4 text-center shadow-lg shadow-black/20">
+  <p className="text-sm leading-6 text-white/70">
+    {isSummary
+      ? "I see a few clear focus areas. Nothing here is a label — it’s a starting point."
+      : currentQuestion.companionMessage}
+       </p>
+        </div>
           <section className="rounded-[2.25rem] border border-white/10 bg-white/[0.07] p-6 shadow-2xl shadow-black/30">
             <div className="mb-5 flex items-center gap-3">
               <div className="h-2 flex-1 rounded-full bg-white/10">
