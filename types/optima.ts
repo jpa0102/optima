@@ -73,3 +73,5 @@ export type SavedDay = {
   drainsLoggedCount: number;
   reflection: string;
 };
+
+export type AppTab = "home" | "check-in" | "history";
