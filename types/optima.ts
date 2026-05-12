@@ -5,36 +5,14 @@ export type Category =
   | "Relational"
   | "Productivity";
 
-export type HabitKind = "positive" | "drain";
-
 export type RatingLabel = "Optimal" | "Sub Optimal" | "Not Optimal";
 
 export type CompanionMood = "bright" | "steady" | "tender";
-
-export type OnboardingQuestionId =
-  | "motivation"
-  | "improvementArea"
-  | "dayDisruptor"
-  | "optimalFeeling"
-  | "communicationStyle";
-
-export type OnboardingAnswerValue = string;
-
-export type OnboardingAnswers = Partial<Record<OnboardingQuestionId, OnboardingAnswerValue>>;
-
-export type OnboardingQuestion = {
-  id: OnboardingQuestionId;
-  eyebrow: string;
-  question: string;
-  companionMessage: string;
-  options: string[];
-};
 
 export type Habit = {
   id: string;
   label: string;
   category: Category;
-  kind: HabitKind;
   points: number;
   description: string;
 };
@@ -49,7 +27,6 @@ export type CategoryScore = {
   category: Category;
   completed: number;
   total: number;
-  completionRate: number;
 };
 
 export type ScoreSummary = {
@@ -57,12 +34,6 @@ export type ScoreSummary = {
   rating: Rating;
   selectedCount: number;
   totalHabits: number;
-  positiveActionsCount: number;
-  drainsLoggedCount: number;
-  strongestArea: Category;
-  growthArea: Category;
-  companionMessage: string;
-  dailyTakeaway: string;
   categoryScores: CategoryScore[];
 };
 
@@ -71,7 +42,6 @@ export type SavedDay = {
   dateLabel: string;
   score: number;
   rating: RatingLabel;
-  positiveActionsCount: number;
-  drainsLoggedCount: number;
+  selectedHabitIds: string[];
   reflection: string;
 };
