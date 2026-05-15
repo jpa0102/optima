@@ -4,8 +4,15 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useState } from "react";
 import { Companion } from "@/components/Companion";
 import { categories } from "@/data/habits";
-import { focusAreaDescriptions, onboardingQuestions } from "@/data/onboardingQuestions";
-import type { Category, OnboardingAnswers, OnboardingQuestionId } from "@/types/optima";
+import {
+  focusAreaDescriptions,
+  onboardingQuestions,
+} from "@/data/onboardingQuestions";
+import type {
+  Category,
+  OnboardingAnswers,
+  OnboardingQuestionId,
+} from "@/types/optima";
 
 type OnboardingFlowProps = {
   onComplete: (answers: OnboardingAnswers) => void;
@@ -18,7 +25,11 @@ const screenMotion = {
   transition: { duration: 0.22 },
 };
 
-function addAreaScore(scores: Record<Category, number>, area: Category, amount = 1) {
+function addAreaScore(
+  scores: Record<Category, number>,
+  area: Category,
+  amount = 1,
+) {
   scores[area] += amount;
 }
 
@@ -39,6 +50,7 @@ function getFocusAreas(answers: OnboardingAnswers): Category[] {
     "Be more productive": "Productivity",
     "Feel more balanced": "Mental",
   };
+
   const disruptorMap: Record<string, Category> = {
     "Poor sleep": "Physical",
     "Too much scrolling": "Mental",
@@ -48,6 +60,7 @@ function getFocusAreas(answers: OnboardingAnswers): Category[] {
     Isolation: "Relational",
     "Lack of planning": "Productivity",
   };
+
   const feelingMap: Record<string, Category> = {
     Peaceful: "Mental",
     Disciplined: "Productivity",
@@ -56,6 +69,7 @@ function getFocusAreas(answers: OnboardingAnswers): Category[] {
     Connected: "Relational",
     Balanced: "Physical",
   };
+
   const toneMap: Record<string, Category> = {
     "Faith-centered": "Spiritual",
     Practical: "Productivity",
@@ -68,7 +82,10 @@ function getFocusAreas(answers: OnboardingAnswers): Category[] {
     addAreaScore(scores, motivationMap[answers.motivation]);
   }
 
-  if (answers.improvementArea && categories.includes(answers.improvementArea as Category)) {
+  if (
+    answers.improvementArea &&
+    categories.includes(answers.improvementArea as Category)
+  ) {
     addAreaScore(scores, answers.improvementArea as Category, 2);
   }
 
@@ -94,29 +111,48 @@ function getFocusAreas(answers: OnboardingAnswers): Category[] {
 export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState<OnboardingAnswers>({});
+
   const isSummary = step >= onboardingQuestions.length;
   const currentQuestion = onboardingQuestions[step];
-  const progress = isSummary ? 100 : ((step + 1) / (onboardingQuestions.length + 1)) * 100;
+
+  const progress = isSummary
+    ? 100
+    : ((step + 1) / (onboardingQuestions.length + 1)) * 100;
+
   const focusAreas = useMemo(() => getFocusAreas(answers), [answers]);
 
-  const answerQuestion = (questionId: OnboardingQuestionId, answer: string) => {
-    setAnswers((currentAnswers) => ({ ...currentAnswers, [questionId]: answer }));
-    setStep((currentStep) => Math.min(currentStep + 1, onboardingQuestions.length));
+  const companionMessage = isSummary
+    ? "I see a few clear focus areas. Nothing here is a label — it’s a starting point."
+    : currentQuestion.companionMessage;
+
+  const answerQuestion = (
+    questionId: OnboardingQuestionId,
+    answer: string,
+  ) => {
+    setAnswers((currentAnswers) => ({
+      ...currentAnswers,
+      [questionId]: answer,
+    }));
+
+    setStep((currentStep) =>
+      Math.min(currentStep + 1, onboardingQuestions.length),
+    );
   };
 
   return (
     <main className="min-h-screen bg-[#07070a] text-white">
       <div className="fixed inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.22),_transparent_34%),radial-gradient(circle_at_top_right,_rgba(124,58,237,0.2),_transparent_30%),linear-gradient(180deg,_#101014_0%,_#07070a_48%,_#020203_100%)]" />
+
       <div className="relative mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-4 py-6">
         <motion.div {...screenMotion} className="space-y-5">
-          <Companion
-            mood="steady"
-            message={
-              isSummary
-                ? "I see a few clear focus areas. Nothing here is a label — it’s a starting point."
-                : currentQuestion.companionMessage
-            }
-          />
+          <Companion mood="steady" />
+
+          <div className="mt-4 rounded-3xl border border-white/10 bg-white/[0.06] p-4 text-center shadow-lg shadow-black/20">
+            <p className="text-sm leading-6 text-white/70">
+              {companionMessage}
+            </p>
+          </div>
+
           <section className="rounded-[2.25rem] border border-white/10 bg-white/[0.07] p-6 shadow-2xl shadow-black/30">
             <div className="mb-5 flex items-center gap-3">
               <div className="h-2 flex-1 rounded-full bg-white/10">
@@ -126,8 +162,11 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                   transition={{ type: "spring", stiffness: 120, damping: 20 }}
                 />
               </div>
+
               <span className="text-xs font-semibold text-white/45">
-                {isSummary ? "Summary" : `${step + 1}/${onboardingQuestions.length}`}
+                {isSummary
+                  ? "Summary"
+                  : `${step + 1}/${onboardingQuestions.length}`}
               </span>
             </div>
 
@@ -137,20 +176,32 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                   <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-200/60">
                     Your Focus Areas
                   </p>
+
                   <h1 className="mt-3 text-3xl font-semibold leading-tight text-white">
                     Here are the areas Óptima will gently watch with you.
                   </h1>
-                  <p className="mt-4 text-sm leading-6 text-white/62">
-                    These are not weaknesses. They are the clearest places where a small reset could help your day feel more aligned.
+
+                  <p className="mt-4 text-sm leading-6 text-white/60">
+                    These are not weaknesses. They are the clearest places
+                    where a small reset could help your day feel more aligned.
                   </p>
+
                   <div className="mt-5 space-y-3">
                     {focusAreas.map((area) => (
-                      <article key={area} className="rounded-3xl border border-white/10 bg-black/20 p-4">
-                        <p className="text-sm font-semibold text-white">{area}</p>
-                        <p className="mt-1 text-xs leading-5 text-white/52">{focusAreaDescriptions[area]}</p>
+                      <article
+                        key={area}
+                        className="rounded-3xl border border-white/10 bg-black/20 p-4"
+                      >
+                        <p className="text-sm font-semibold text-white">
+                          {area}
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-white/50">
+                          {focusAreaDescriptions[area]}
+                        </p>
                       </article>
                     ))}
                   </div>
+
                   <button
                     type="button"
                     onClick={() => onComplete(answers)}
@@ -164,24 +215,35 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                   <p className="text-xs font-semibold uppercase tracking-[0.3em] text-emerald-200/60">
                     {currentQuestion.eyebrow}
                   </p>
-                  <h1 className="mt-3 text-3xl font-semibold leading-tight text-white">{currentQuestion.question}</h1>
+
+                  <h1 className="mt-3 text-3xl font-semibold leading-tight text-white">
+                    {currentQuestion.question}
+                  </h1>
+
                   <div className="mt-5 grid gap-2">
                     {currentQuestion.options.map((option) => (
                       <motion.button
                         key={option}
                         type="button"
                         whileTap={{ scale: 0.98 }}
-                        onClick={() => answerQuestion(currentQuestion.id, option)}
+                        onClick={() =>
+                          answerQuestion(currentQuestion.id, option)
+                        }
                         className="rounded-3xl border border-white/10 bg-white/[0.06] p-4 text-left text-sm font-semibold text-white transition hover:border-emerald-200/40 hover:bg-emerald-200/10"
                       >
                         {option}
                       </motion.button>
                     ))}
                   </div>
+
                   {step > 0 ? (
                     <button
                       type="button"
-                      onClick={() => setStep((currentStep) => Math.max(0, currentStep - 1))}
+                      onClick={() =>
+                        setStep((currentStep) =>
+                          Math.max(0, currentStep - 1),
+                        )
+                      }
                       className="mt-5 text-sm font-semibold text-white/45 transition hover:text-white"
                     >
                       Back
