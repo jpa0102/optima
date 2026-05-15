@@ -69,7 +69,10 @@ export type SavedDay = {
   dateLabel: string;
   score: number;
   rating: RatingLabel;
-  positiveActionsCount: number;
-  drainsLoggedCount: number;
+  selectedHabitIds: string[];
+  positiveActionsCount?: number;
+  drainsLoggedCount?: number;
   reflection: string;
 };
+
+export type AppTab = "home" | "check-in" | "history";
