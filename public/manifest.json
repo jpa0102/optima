@@ -1,0 +1,8 @@
+{
+  "name": "Óptima",
+  "short_name": "Óptima",
+  "theme_color": "#07070a",
+  "background_color": "#07070a",
+  "display": "standalone",
+  "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+}

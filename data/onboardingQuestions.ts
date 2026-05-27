@@ -5,7 +5,8 @@ export const onboardingQuestions: OnboardingQuestion[] = [
     id: "motivation",
     eyebrow: "First, your why",
     question: "What brings you to Óptima?",
-    companionMessage: "I’ll use this to keep your reflection focused, not heavy.",
+    companionMessage: "I'll use this to keep your reflection focused, not heavy.",
+    multiSelect: true,
     options: [
       "Build better discipline",
       "Reduce doomscrolling",
@@ -20,13 +21,15 @@ export const onboardingQuestions: OnboardingQuestion[] = [
     eyebrow: "Your focus",
     question: "Which area do you want to improve most?",
     companionMessage: "No pressure to fix everything. One clear focus is enough to begin.",
-    options: ["Spiritual", "Mental", "Physical", "Relational", "Productivity"],
+    multiSelect: true,
+    options: ["Spiritual", "Mental", "Physical", "Relational", "Stewardship"],
   },
   {
     id: "dayDisruptor",
     eyebrow: "Common drain",
     question: "What usually throws off your day?",
     companionMessage: "Thanks for being honest. Naming the pattern gives you more choice around it.",
+    multiSelect: true,
     options: [
       "Poor sleep",
       "Too much scrolling",
@@ -42,6 +45,7 @@ export const onboardingQuestions: OnboardingQuestion[] = [
     eyebrow: "Your version of optimal",
     question: "What does an optimal day feel like to you?",
     companionMessage: "Optimal does not mean perfect. It means aligned enough to build from.",
+    multiSelect: true,
     options: ["Peaceful", "Disciplined", "Productive", "Spiritually aligned", "Connected", "Balanced"],
   },
   {
@@ -58,5 +62,5 @@ export const focusAreaDescriptions: Record<Category, string> = {
   Mental: "Protect attention and give your mind a little more space to breathe.",
   Physical: "Support your body with rest, hydration, movement, and honest recovery.",
   Relational: "Stay connected without forcing yourself to perform for everyone.",
-  Productivity: "Make tomorrow easier with simple planning and one clear priority.",
+  Stewardship: "Make tomorrow easier with simple planning and one clear priority.",
 };

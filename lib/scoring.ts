@@ -8,6 +8,9 @@ import type {
   ScoreSummary,
 } from "@/types/optima";
 
+const VOLUME_CAP = 5;
+const HEART_HABIT_IDS = ["morning-prayer", "evening-examen"];
+
 const clampScore = (score: number) =>
   Math.min(100, Math.max(0, Math.round(score)));
 
@@ -17,23 +20,31 @@ export function getRating(score: number): Rating {
   if (normalizedScore >= 85) {
     return {
       label: "Optimal",
-      tone: "A clear, grounded day. Let it encourage you without needing to chase it.",
-      companionMood: "bright",
+      tone: "A day of faithful stewardship. Give the glory back to Him.",
+      companionMood: "Flourishing",
     };
   }
 
-  if (normalizedScore >= 60) {
+  if (normalizedScore >= 65) {
     return {
       label: "Sub Optimal",
-      tone: "A mixed but meaningful day. Notice what worked and reset gently.",
-      companionMood: "steady",
+      tone: "More right than wrong today. Reset gently and press on in grace.",
+      companionMood: "Faithful",
+    };
+  }
+
+  if (normalizedScore >= 40) {
+    return {
+      label: "Not Optimal",
+      tone: "His grace is sufficient. Tomorrow's mercies are already waiting.",
+      companionMood: "Pressing On",
     };
   }
 
   return {
     label: "Not Optimal",
-    tone: "A tender day deserves honesty and care. Tomorrow can be simpler.",
-    companionMood: "tender",
+    tone: "His grace is sufficient. Tomorrow's mercies are already waiting.",
+    companionMood: "Be Still",
   };
 }
 
@@ -41,38 +52,66 @@ export function getRatingLabel(score: number): RatingLabel {
   return getRating(score).label;
 }
 
+type PillarResult = {
+  pillarScore: number;
+  presenceAchieved: boolean;
+};
+
+function scorePillar(
+  category: Category,
+  selectedHabitIds: string[],
+  habitList: Habit[],
+): PillarResult {
+  const pillarHabits = habitList.filter((h) => h.category === category);
+  const selectedPositive = pillarHabits.filter(
+    (h) => h.kind === "positive" && selectedHabitIds.includes(h.id),
+  );
+  const selectedDrains = pillarHabits.filter(
+    (h) => h.kind === "drain" && selectedHabitIds.includes(h.id),
+  );
+
+  const presenceAchieved = selectedPositive.length >= 1;
+
+  if (!presenceAchieved) {
+    return { pillarScore: 0, presenceAchieved: false };
+  }
+
+  const extraPositive = Math.min(selectedPositive.length - 1, VOLUME_CAP);
+  const volumeBonus = (extraPositive / VOLUME_CAP) * 50;
+
+  let heartBonus = 0;
+  if (category === "Spiritual") {
+    const heartCount = HEART_HABIT_IDS.filter((id) =>
+      selectedHabitIds.includes(id),
+    ).length;
+    heartBonus = heartCount === 2 ? 15 : heartCount === 1 ? 8 : 0;
+  }
+
+  const drainPenalty = Math.min(
+    selectedDrains.reduce((sum, h) => sum + Math.abs(h.points), 0),
+    40,
+  );
+
+  const pillarScore = clampScore(40 + volumeBonus + heartBonus - drainPenalty);
+
+  return { pillarScore, presenceAchieved: true };
+}
+
 export function calculateScore(
   selectedHabitIds: string[],
   habitList: Habit[] = habits,
 ): number {
-  const positiveHabits = habitList.filter((habit) => habit.kind === "positive");
-  const drainHabits = habitList.filter((habit) => habit.kind === "drain");
-
-  const possiblePositivePoints = positiveHabits.reduce(
-    (sum, habit) => sum + Math.max(0, habit.points),
-    0,
+  const pillarResults = categories.map((category) =>
+    scorePillar(category, selectedHabitIds, habitList),
   );
 
-  const selectedPositivePoints = positiveHabits.reduce(
-    (sum, habit) =>
-      sum + (selectedHabitIds.includes(habit.id) ? Math.max(0, habit.points) : 0),
-    0,
-  );
+  const pillarsPresent = pillarResults.filter((r) => r.presenceAchieved).length;
+  const pillarSum = pillarResults.reduce((sum, r) => sum + r.pillarScore, 0);
 
-  const selectedDrainPoints = drainHabits.reduce(
-    (sum, habit) =>
-      sum + (selectedHabitIds.includes(habit.id) ? Math.abs(habit.points) : 0),
-    0,
-  );
+  const breadthBonus =
+    pillarsPresent === 5 ? 25 : (pillarsPresent / 5) * 20;
 
-  if (possiblePositivePoints === 0) {
-    return 0;
-  }
-
-  const baseScore = (selectedPositivePoints / possiblePositivePoints) * 100;
-  const finalScore = baseScore - selectedDrainPoints;
-
-  return clampScore(finalScore);
+  return clampScore(pillarSum / 5 + breadthBonus);
 }
 
 function buildCategoryScores(
@@ -80,57 +119,63 @@ function buildCategoryScores(
   habitList: Habit[] = habits,
 ): CategoryScore[] {
   return categories.map((category) => {
-    const categoryHabits = habitList.filter((habit) => habit.category === category);
-
-    const completed = categoryHabits.filter((habit) =>
-      selectedHabitIds.includes(habit.id),
+    const pillarHabits = habitList.filter((h) => h.category === category);
+    const completed = pillarHabits.filter((h) =>
+      selectedHabitIds.includes(h.id),
     ).length;
+    const total = pillarHabits.length;
 
-    const total = categoryHabits.length;
+    const { pillarScore, presenceAchieved } = scorePillar(
+      category,
+      selectedHabitIds,
+      habitList,
+    );
 
     return {
       category,
       completed,
       total,
-      completionRate: total === 0 ? 0 : Math.round((completed / total) * 100),
+      completionRate: pillarScore,
+      presenceAchieved,
     };
   });
 }
 
 function getStrongestArea(categoryScores: CategoryScore[]): Category {
-  const sorted = [...categoryScores].sort(
-    (a, b) => b.completionRate - a.completionRate,
-  );
-
-  return sorted[0]?.category ?? "Mental";
+  const present = categoryScores.filter((s) => s.presenceAchieved);
+  const pool = present.length > 0 ? present : categoryScores;
+  return [...pool].sort((a, b) => b.completionRate - a.completionRate)[0]
+    ?.category ?? "Mental";
 }
 
 function getGrowthArea(categoryScores: CategoryScore[]): Category {
-  const sorted = [...categoryScores].sort(
+  return [...categoryScores].sort(
     (a, b) => a.completionRate - b.completionRate,
-  );
-
-  return sorted[0]?.category ?? "Mental";
+  )[0]?.category ?? "Mental";
 }
 
-function getCompanionMessage(score: number): string {
+export function getCompanionMessage(score: number): string {
   if (score >= 85) {
-    return "You showed strong alignment today. Let this encourage you, not pressure you.";
+    return "You are bearing much fruit today. Let gratitude be your response, not pride.";
   }
 
-  if (score >= 60) {
-    return "There was real momentum here. A few areas need care, but this is a day you can build from.";
+  if (score >= 65) {
+    return "You are showing up faithfully. God honors the ordinary, obedient day.";
   }
 
-  return "Today may have felt heavy, but honest tracking is still a win. Let’s reset with clarity.";
+  if (score >= 40) {
+    return "Even here, He is with you. The righteous fall seven times and rise again.";
+  }
+
+  return "Come to Him as you are. His mercies are new every morning — this is not your final word.";
 }
 
-function getDailyTakeaway(score: number): string {
+export function getDailyTakeaway(score: number): string {
   if (score >= 85) {
     return "Your habits supported the kind of day you want to live.";
   }
 
-  if (score >= 60) {
+  if (score >= 65) {
     return "Your day had a foundation. The next step is protecting the areas that slipped.";
   }
 
@@ -144,17 +189,19 @@ export function buildScoreSummary(
   const score = calculateScore(selectedHabitIds, habitList);
   const categoryScores = buildCategoryScores(selectedHabitIds, habitList);
 
-  const selectedHabits = habitList.filter((habit) =>
-    selectedHabitIds.includes(habit.id),
+  const selectedHabits = habitList.filter((h) =>
+    selectedHabitIds.includes(h.id),
   );
 
   const positiveActionsCount = selectedHabits.filter(
-    (habit) => habit.kind === "positive",
+    (h) => h.kind === "positive",
   ).length;
 
   const drainsLoggedCount = selectedHabits.filter(
-    (habit) => habit.kind === "drain",
+    (h) => h.kind === "drain",
   ).length;
+
+  const pillarsPresent = categoryScores.filter((s) => s.presenceAchieved).length;
 
   return {
     score,
@@ -168,5 +215,7 @@ export function buildScoreSummary(
     companionMessage: getCompanionMessage(score),
     dailyTakeaway: getDailyTakeaway(score),
     categoryScores,
+    pillarsPresent,
+    isFaithfulDay: pillarsPresent >= 4,
   };
 }

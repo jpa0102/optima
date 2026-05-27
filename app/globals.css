@@ -1,15 +1,89 @@
 @import "tailwindcss";
 
-:root {
-  --background: #07070a;
-  --foreground: #f8fafc;
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-parchment-50: #fefcf8;
+  --color-parchment-100: #faf7f2;
+  --color-parchment-200: #f5f0e8;
+  --color-parchment-300: #ede4d3;
+  --color-parchment-400: #ddd0b8;
+
+  --color-forest-50: #f0f7f4;
+  --color-forest-100: #d8ede5;
+  --color-forest-200: #b0dbc9;
+  --color-forest-300: #74c69d;
+  --color-forest-400: #52b588;
+  --color-forest-500: #40916c;
+  --color-forest-600: #2d6a4f;
+  --color-forest-700: #1b4332;
+  --color-forest-800: #143327;
+  --color-forest-900: #0d2218;
+
+  --color-terra-100: #fde8df;
+  --color-terra-200: #f9c4ad;
+  --color-terra-300: #e8956d;
+  --color-terra-400: #d4694a;
+  --color-terra-500: #bc4a2f;
+  --color-terra-600: #9a3520;
+  --color-terra-700: #7a2818;
+
+  --font-family-sans: var(--font-inter), system-ui, sans-serif;
+  --font-family-serif: var(--font-fraunces), Georgia, serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+:root {
+  --bg-primary: #faf7f2;
+  --bg-secondary: #f5f0e8;
+  --bg-card: #ffffff;
+  --bg-card-alt: #fdf9f4;
+  --bg-subtle: #f0ebe0;
+
+  --text-primary: #1c1917;
+  --text-secondary: #57534e;
+  --text-tertiary: #a8a29e;
+  --text-ghost: #d6d0c8;
+
+  --accent-green: #2d6a4f;
+  --accent-green-light: #40916c;
+  --accent-terra: #bc4a2f;
+  --accent-amber: #92400e;
+  --accent-indigo: #3730a3;
+  --accent-rose: #9d174d;
+
+  --border-soft: rgba(28, 25, 23, 0.07);
+  --border-medium: rgba(28, 25, 23, 0.12);
+  --border-strong: rgba(28, 25, 23, 0.2);
+
+  --shadow-card: 0 2px 12px rgba(28, 25, 23, 0.07);
+  --shadow-elevated: 0 4px 24px rgba(28, 25, 23, 0.10);
+}
+
+.dark {
+  --bg-primary: #0f0d0b;
+  --bg-secondary: #161310;
+  --bg-card: #1a1714;
+  --bg-card-alt: #1e1b17;
+  --bg-subtle: #211e1a;
+
+  --text-primary: #f5f0e8;
+  --text-secondary: #a8a29e;
+  --text-tertiary: #6b6560;
+  --text-ghost: #3d3833;
+
+  --accent-green: #52b588;
+  --accent-green-light: #74c69d;
+  --accent-terra: #e8956d;
+  --accent-amber: #fbbf24;
+  --accent-indigo: #818cf8;
+  --accent-rose: #f472b6;
+
+  --border-soft: rgba(245, 240, 232, 0.06);
+  --border-medium: rgba(245, 240, 232, 0.10);
+  --border-strong: rgba(245, 240, 232, 0.18);
+
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.3);
+  --shadow-elevated: 0 4px 24px rgba(0, 0, 0, 0.4);
 }
 
 * {
@@ -17,14 +91,15 @@
 }
 
 html {
-  background: var(--background);
+  background: var(--bg-primary);
 }
 
 body {
   margin: 0;
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 button {
