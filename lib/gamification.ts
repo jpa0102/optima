@@ -96,3 +96,42 @@ export function isTodaySabbath(): boolean {
 export function shouldCountStreakToday(sabbathDayOfWeek: number): boolean {
   return new Date().getDay() !== sabbathDayOfWeek;
 }
+
+export function isDateSabbath(dateStr: string, sabbathDayOfWeek: number): boolean {
+  return new Date(dateStr + "T12:00:00").getDay() === sabbathDayOfWeek;
+}
+
+export function updateStreak(completedDate: string, sabbathDayOfWeek: number): void {
+  const raw = loadGameStats();
+  if (raw.lastCheckinDate === completedDate) return;
+  if (isDateSabbath(completedDate, sabbathDayOfWeek)) return;
+
+  const lastDate = raw.lastCheckinDate;
+  let newStreak: number;
+
+  if (!lastDate) {
+    newStreak = 1;
+  } else {
+    const lastMs = new Date(lastDate + "T12:00:00").getTime();
+    const currMs = new Date(completedDate + "T12:00:00").getTime();
+    const diffDays = Math.round((currMs - lastMs) / 86_400_000);
+
+    if (diffDays === 1) {
+      newStreak = raw.streak + 1;
+    } else if (diffDays === 2) {
+      const gapDate = new Date(lastDate + "T12:00:00");
+      gapDate.setDate(gapDate.getDate() + 1);
+      const gapStr = gapDate.toISOString().slice(0, 10);
+      newStreak = isDateSabbath(gapStr, sabbathDayOfWeek) ? raw.streak + 1 : 1;
+    } else {
+      newStreak = 1;
+    }
+  }
+
+  saveGameStats({
+    totalXP: raw.totalXP,
+    streak: newStreak,
+    longestStreak: Math.max(newStreak, raw.longestStreak),
+    lastCheckinDate: completedDate,
+  });
+}

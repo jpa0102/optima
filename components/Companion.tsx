@@ -5,7 +5,7 @@ import type { CompanionMood } from "@/types/optima";
 
 type CompanionProps = {
   mood: CompanionMood;
-  size?: "lg";
+  size?: "lg" | "sm";
 };
 
 function DrainedFaceSvg({ className }: { className: string }) {
@@ -115,6 +115,35 @@ export function Companion({ mood, size }: CompanionProps) {
   const faceStyle = {
     background: `radial-gradient(circle at 35% 35%, rgba(255,255,255,0.18) 0%, ${style.faceColor} 100%)`,
   };
+
+  if (size === "sm") {
+    return (
+      <div className="relative inline-flex items-center justify-center">
+        <motion.div
+          className={`absolute rounded-full blur-2xl ${style.aura}`}
+          style={{ width: 88, height: 88 }}
+          animate={{ opacity: [0.3, 0.65, 0.3], scale: [1, 1.15, 1] }}
+          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <div
+          className="relative flex h-20 w-20 items-center justify-center rounded-[1.75rem] text-white shadow-lg"
+          style={{ ...faceStyle, boxShadow: `0 4px 24px ${style.faceGlow}` }}
+        >
+          {mood === "Be Still" ? (
+            <DrainedFaceSvg className="h-10 w-10" />
+          ) : (
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex gap-3.5">
+                <span className="h-2.5 w-2.5 rounded-full bg-current" />
+                <span className="h-2.5 w-2.5 rounded-full bg-current" />
+              </div>
+              <span className={style.mouth} />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (size === "lg") {
     return (

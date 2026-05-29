@@ -1,4 +1,4 @@
-import type { Category, Habit, SavedDay } from "@/types/optima";
+import type { Category, Habit } from "@/types/optima";
 
 export const categories: Category[] = [
   "Spiritual",
@@ -1400,43 +1400,3 @@ export const habits: Habit[] = [
   },
 ];
 
-export const savedDays: SavedDay[] = [
-  {
-    id: "may-10",
-    dateLabel: "Yesterday",
-    score: 82,
-    rating: "Sub Optimal",
-    selectedHabitIds: [
-      "quiet-prayer",
-      "gratitude",
-      "clear-mind",
-      "moved-body",
-      "connected",
-      "one-priority",
-      "closed-loop",
-    ],
-    reflection: "A steady day with room to rest earlier.",
-  },
-  {
-    id: "may-09",
-    dateLabel: "Saturday",
-    score: 91,
-    rating: "Optimal",
-    selectedHabitIds: [
-      "quiet-prayer",
-      "gratitude",
-      "slept-well",
-      "connected",
-      "deep-conversation",
-    ],
-    reflection: "Felt present, clear, and connected.",
-  },
-  {
-    id: "may-08",
-    dateLabel: "Friday",
-    score: 54,
-    rating: "Not Optimal",
-    selectedHabitIds: ["protected-focus", "kind-boundary", "closed-loop"],
-    reflection: "A hard day. Still noticed what needed care.",
-  },
-];

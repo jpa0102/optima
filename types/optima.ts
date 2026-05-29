@@ -71,15 +71,18 @@ export type ScoreSummary = {
   isFaithfulDay: boolean;
 };
 
-export type SavedDay = {
-  id: string;
+export type DailyRecord = {
+  date: string;
   dateLabel: string;
   score: number;
-  rating: RatingLabel;
+  companionMood: CompanionMood;
+  ratingLabel: RatingLabel;
   selectedHabitIds: string[];
-  positiveActionsCount?: number;
-  drainsLoggedCount?: number;
-  reflection: string;
+  categoryScores: CategoryScore[];
+  pillarsPresent: number;
+  isFaithfulDay: boolean;
+  topPillar?: Category;
+  weakestPillar?: Category;
 };
 
 export type AppTab = "home" | "check-in" | "history";
