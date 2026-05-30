@@ -73,12 +73,21 @@ const stateLabels: Record<CompanionMood, string> = {
   "Be Still": "Be Still",
 };
 
-const stateEmoji: Record<CompanionMood, string> = {
-  "Flourishing": "🔥",
-  "Faithful": "⚡",
-  "Pressing On": "🌱",
-  "Be Still": "💤",
+const moodIndicator: Record<CompanionMood, string> = {
+  "Flourishing": "✦",
+  "Faithful":    "·",
+  "Pressing On": "↻",
+  "Be Still":    "𝓏",
 };
+
+const pillarCircleClass: Record<Category, string> = {
+  Spiritual:   "bg-violet-50 text-violet-600",
+  Mental:      "bg-blue-50 text-blue-600",
+  Physical:    "bg-emerald-50 text-emerald-600",
+  Relational:  "bg-pink-50 text-pink-600",
+  Stewardship: "bg-amber-50 text-amber-600",
+};
+
 
 const stateColors: Record<CompanionMood, string> = {
   "Flourishing": "text-forest-600 dark:text-emerald-300",
@@ -511,104 +520,64 @@ export default function Home() {
 
           {/* ── HOME TAB ─────────────────────────────────────────────── */}
           {activeTab === "home" && (
-            <div className="flex flex-col items-center gap-5 pb-2">
+            <div className="flex flex-col items-center pb-4">
               {isSabbath ? (
                 <SabbathScreen />
               ) : (
                 <>
                   {!notifAsked && <NotificationSetup onComplete={() => setNotifAsked(true)} />}
 
-                  <Companion mood={mood} size="lg" />
-
-                  <motion.p
-                    key={mood}
-                    initial={{ scale: 0.5, opacity: 0 }}
-                    animate={{ scale: [0.5, 1.1, 1], opacity: [0, 1, 1] }}
-                    transition={{ duration: 0.45, times: [0, 0.65, 1], ease: "easeOut" }}
-                    className={`font-serif text-4xl font-black ${stateColors[mood]}`}
-                  >
-                    {stateLabels[mood]} <span className="text-3xl">{stateEmoji[mood]}</span>
-                  </motion.p>
-
-                  <div className="flex w-full items-center justify-between rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none">
-                    <span className="text-sm font-bold text-terra-500 dark:text-amber-300">
-                      {gameStats.currentStreak > 0 ? `✦ ${gameStats.currentStreak} days walking` : "Begin your walk today"}
-                    </span>
-                    <span
-                      className="rounded-full border px-3 py-0.5 text-xs font-bold"
-                      style={{ color: gameStats.level.color, borderColor: gameStats.level.color + "55", backgroundColor: gameStats.level.color + "18" }}
-                    >
-                      Lv.{gameStats.level.tier} · {gameStats.level.title}
-                    </span>
+                  {/* 1. Opti — center stage */}
+                  <div className="mt-4 mb-1 w-full">
+                    <Companion mood={mood} size="lg" />
                   </div>
 
-                  <p className="w-full text-center text-xs text-stone-400 dark:text-white/30">
-                    {summary.positiveActionsCount > 0
-                      ? `${summary.positiveActionsCount} ${summary.positiveActionsCount === 1 ? "practice" : "practices"} logged today · ${summary.score}/100 so far`
-                      : "Nothing tracked yet — your check-in is waiting."}
-                  </p>
+                  {/* 2. State label + gradient bar — unified block */}
+                  <div className="mt-2 w-full">
+                    <motion.h1
+                      key={mood}
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ type: "tween", duration: 0.4 }}
+                      className={`mb-3 text-center font-serif text-3xl font-black tracking-tight ${scoreColor[mood]}`}
+                    >
+                      {stateLabels[mood]}{" "}
+                      <span className="ml-1 text-2xl">{moodIndicator[mood]}</span>
+                    </motion.h1>
 
-                  <motion.div
-                    key={`msg-${mood}`}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: 0.18 }}
-                    className="w-full rounded-2xl border border-stone-200 bg-white/80 px-5 py-3 shadow-sm dark:border-white/10 dark:bg-white/[0.07] dark:shadow-none"
-                  >
-                    <p className="text-center font-serif text-base italic leading-6 text-stone-600 dark:text-white/70">
-                      {optiHomeMessage}
-                    </p>
-                  </motion.div>
-
-                  {/* ── Score bar section ─────────────────────── */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.25, duration: 0.5 }}
-                    className="mt-2 w-full"
-                  >
-                    <div className="mb-2 flex items-center justify-between">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-white/30">
-                        Today&apos;s Stewardship
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <span className={`font-serif font-black text-lg ${scoreColor[mood]}`}>
-                          {summary.score}
-                        </span>
-                        <span className="text-stone-300">·</span>
-                        <span className={`text-sm font-semibold ${scoreColor[mood]}`}>
-                          {stateLabels[mood]}
-                        </span>
-                      </div>
+                    <div className="mb-1.5 flex items-center justify-between px-1">
+                      <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-stone-400 dark:text-white/30">
+                        Today&apos;s Walk
+                      </span>
+                      <span className={`font-serif font-bold text-sm ${scoreColor[mood]}`}>
+                        {summary.score}
+                      </span>
                     </div>
 
-                    <div className="h-5 w-full overflow-hidden rounded-full bg-stone-100 shadow-inner dark:bg-white/10">
+                    <div className="h-3 w-full overflow-hidden rounded-full bg-stone-100 shadow-inner dark:bg-white/10">
                       <motion.div
                         className="relative h-full rounded-full"
-                        style={{
-                          background: "linear-gradient(to right, #40916c, #60a5fa, #a78bfa, #fb923c, #f472b4)",
-                          backgroundSize: "200% 100%",
-                        }}
+                        style={{ background: "linear-gradient(to right, #40916c, #60a5fa, #a78bfa, #fb923c, #f472b4)" }}
                         initial={{ width: "0%" }}
                         animate={{ width: `${summary.score}%` }}
-                        transition={{ type: "tween", duration: 1.2, ease: [0.34, 1.56, 0.64, 1], delay: 0.4 }}
+                        transition={{ type: "tween", duration: 1.0, ease: [0.34, 1.56, 0.64, 1], delay: 0.3 }}
                       >
                         <motion.div
-                          className="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                          className="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-white/30 to-transparent"
                           animate={{ x: ["-100%", "200%"] }}
-                          transition={{ type: "tween", duration: 1.8, delay: 1.6, ease: "easeInOut" }}
+                          transition={{ type: "tween", duration: 2.0, delay: 1.4, ease: "easeInOut" }}
                         />
                       </motion.div>
                     </div>
 
-                    <div className="mt-2 flex justify-center">
-                      <span className={`inline-flex rounded-full px-4 py-1.5 text-xs font-black uppercase tracking-wider ${ratingBarBadge[summary.rating.label]}`}>
+                    <div className="mt-3 flex justify-center">
+                      <span className={`inline-flex rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wider ${ratingBarBadge[summary.rating.label]}`}>
                         {summary.rating.label}
                       </span>
                     </div>
 
-                    <p className="mt-2 text-center text-[11px] leading-5 text-stone-400 dark:text-white/30">
-                      This reflects stewardship — not your worth before God.
+                    <p className="mt-2 text-center text-[10px] leading-5 text-stone-400 dark:text-white/30">
+                      This reflects stewardship, not your worth before God.
                     </p>
 
                     {summary.isFaithfulDay && (
@@ -616,35 +585,39 @@ export default function Home() {
                         initial={{ opacity: 0, y: 4 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 1.4, type: "tween" }}
-                        className="mt-3 text-center font-serif text-xs font-semibold text-forest-600 dark:text-emerald-400"
+                        className="mt-2 text-center font-serif text-[11px] font-semibold text-forest-600 dark:text-emerald-400"
                       >
                         ✦ You showed up across your whole life today.
                       </motion.p>
                     )}
+                  </div>
+
+                  {/* 3. Companion message — elegant text, no card */}
+                  <motion.div
+                    key={`msg-${mood}`}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.6, duration: 0.5 }}
+                    className="mb-1 mt-5 px-6 text-center"
+                  >
+                    <p className="mx-auto max-w-[280px] font-serif text-sm italic leading-7 text-stone-500 dark:text-white/50">
+                      {optiHomeMessage}
+                    </p>
                   </motion.div>
 
-                  <DailyIntentionCard
-                    intentions={intentions.intentions}
-                    isPremium={isPremium}
-                    onAdd={() => setShowIntentionPicker(true)}
-                    onRemove={handleRemoveIntention}
-                    onUpdateTime={handleUpdateTime}
-                    onRequestNotifications={handleRequestNotifications}
-                  />
-
-                  {/* ── Five pillar bars ───────────────────────── */}
-                  <div className="w-full">
-                    <div className="mb-3 mt-3 flex items-center justify-between">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-white/30">
+                  {/* 4. Five pillar bars — elegant, compact */}
+                  <div className="mt-5 w-full">
+                    <div className="mb-3 flex items-center justify-between px-1">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-stone-400 dark:text-white/30">
                         Five Pillars
                       </p>
                       {summary.isFaithfulDay && (
-                        <p className="text-[10px] font-bold text-forest-600 dark:text-emerald-400">
-                          All present ✦
+                        <p className="text-[9px] font-bold tracking-wider text-forest-600 dark:text-emerald-400">
+                          All present
                         </p>
                       )}
                     </div>
-                    <div className="space-y-3">
+                    <div className="space-y-2.5">
                       {summary.categoryScores.map((cs, i) => {
                         const pb = pillarBarConfig[cs.category];
                         return (
@@ -652,27 +625,29 @@ export default function Home() {
                             key={cs.category}
                             initial={{ opacity: 0, x: -8 }}
                             animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.6 + i * 0.08, type: "tween", duration: 0.4 }}
+                            transition={{ delay: 0.6 + i * 0.06, type: "tween", duration: 0.4 }}
                             className="flex items-center gap-3"
                           >
-                            <div className="flex w-28 shrink-0 items-center gap-2">
-                              <span className="text-sm">{categoryEmoji[cs.category]}</span>
-                              <span className={`text-xs font-bold ${pb.nameColor}`}>{cs.category}</span>
+                            <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs ${pillarCircleClass[cs.category]}`}>
+                              {categoryEmoji[cs.category]}
                             </div>
-                            <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-stone-100 dark:bg-white/10">
-                              <motion.div
-                                className={`h-full rounded-full ${pb.barColor}`}
-                                style={{ boxShadow: `0 0 8px ${pb.glow}` }}
-                                initial={{ width: "0%" }}
-                                animate={{ width: `${cs.completionRate}%` }}
-                                transition={{ type: "tween", duration: 0.8, delay: 0.7 + i * 0.08, ease: "easeOut" }}
-                              />
+                            <div className="min-w-0 flex-1">
+                              <p className={`text-[11px] font-bold tracking-wide ${pb.nameColor}`}>
+                                {cs.category}
+                              </p>
+                              <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-stone-100 dark:bg-white/10">
+                                <motion.div
+                                  className={`h-full rounded-full ${pb.barColor}`}
+                                  style={{ boxShadow: `0 0 6px ${pb.glow.replace("0.5)", "0.4)")}` }}
+                                  initial={{ width: "0%" }}
+                                  animate={{ width: `${cs.completionRate}%` }}
+                                  transition={{ type: "tween", duration: 0.7, delay: 0.7 + i * 0.06, ease: "easeOut" }}
+                                />
+                              </div>
                             </div>
-                            <div className="w-12 shrink-0 text-right">
-                              {cs.presenceAchieved ? (
-                                <span className="text-sm text-forest-500 dark:text-emerald-400" title="Showing up here">✦</span>
-                              ) : (
-                                <span className="text-xs text-stone-400 dark:text-white/30">{Math.round(cs.completionRate)}%</span>
+                            <div className="w-6 shrink-0 text-right">
+                              {cs.presenceAchieved && (
+                                <span className="text-xs text-forest-500 dark:text-emerald-400">✦</span>
                               )}
                             </div>
                           </motion.div>
@@ -681,22 +656,54 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {!nudgeDismissed && (
-                    <SmartNudge
-                      categoryScores={summary.categoryScores}
-                      onDismiss={() => setNudgeDismissed(true)}
-                      onCheckIn={() => setActiveTab("check-in")}
+                  {/* 5. Daily Intention Card */}
+                  <div className="mt-5 w-full">
+                    <DailyIntentionCard
+                      intentions={intentions.intentions}
+                      isPremium={isPremium}
+                      onAdd={() => setShowIntentionPicker(true)}
+                      onRemove={handleRemoveIntention}
+                      onUpdateTime={handleUpdateTime}
+                      onRequestNotifications={handleRequestNotifications}
                     />
+                  </div>
+
+                  {/* 6. Streak + level — minimal footer */}
+                  <div className="mt-3 mb-1 flex items-center justify-center gap-3">
+                    <span className={`text-[10px] font-semibold ${gameStats.currentStreak > 0 ? "text-terra-500 dark:text-amber-300" : "text-stone-400 dark:text-white/30"}`}>
+                      {gameStats.currentStreak > 0 ? `✦ ${gameStats.currentStreak} day${gameStats.currentStreak !== 1 ? "s" : ""} walking` : "Begin your walk today"}
+                    </span>
+                    <span className="text-stone-300 dark:text-white/20">·</span>
+                    <span className="text-[10px] font-semibold text-stone-400 dark:text-white/30">
+                      Lv.{gameStats.level.tier} {gameStats.level.title}
+                    </span>
+                  </div>
+
+                  {/* Smart nudge */}
+                  {!nudgeDismissed && (
+                    <div className="mt-3 w-full">
+                      <SmartNudge
+                        categoryScores={summary.categoryScores}
+                        onDismiss={() => setNudgeDismissed(true)}
+                        onCheckIn={() => setActiveTab("check-in")}
+                      />
+                    </div>
                   )}
 
+                  {/* 7. CTA */}
                   <motion.button
                     type="button"
                     onClick={() => setActiveTab("check-in")}
-                    animate={{ boxShadow: ["0 4px 20px rgba(45,106,79,0.20)", "0 4px 40px rgba(45,106,79,0.40)", "0 4px 20px rgba(45,106,79,0.20)"] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                    className="w-full rounded-full bg-forest-700 px-5 py-5 text-base font-black text-white dark:bg-gradient-to-r dark:from-emerald-400 dark:to-cyan-400 dark:text-zinc-900"
+                    whileTap={{ scale: 0.97 }}
+                    animate={selectedHabitIds.length === 0 ? {
+                      boxShadow: ["0 0 0 0 rgba(45,106,79,0.3)", "0 0 0 8px rgba(45,106,79,0)", "0 0 0 0 rgba(45,106,79,0)"],
+                    } : {
+                      boxShadow: "0 4px 12px rgba(45,106,79,0.15)",
+                    }}
+                    transition={selectedHabitIds.length === 0 ? { duration: 1.8, repeat: Infinity } : {}}
+                    className="mt-4 w-full rounded-full bg-forest-700 py-4 text-sm font-black text-white shadow-md shadow-forest-700/15 dark:bg-gradient-to-r dark:from-emerald-400 dark:to-cyan-400 dark:text-zinc-900"
                   >
-                    Steward Today →
+                    {selectedHabitIds.length === 0 ? "Begin today's check-in →" : "Continue today's check-in →"}
                   </motion.button>
                 </>
               )}
