@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { AreaRing } from "@/components/AreaRing";
 import { BottomNav, type NavTab } from "@/components/BottomNav";
 import { CategorySheet } from "@/components/CategorySheet";
 import { Companion } from "@/components/Companion";
@@ -15,7 +14,7 @@ import { SabbathScreen } from "@/components/SabbathScreen";
 import { SettingsSheet } from "@/components/SettingsSheet";
 import { SmartNudge } from "@/components/SmartNudge";
 import { getTipForCategory } from "@/data/categoryTips";
-import { categoryConfig, categoryEmoji } from "@/lib/categoryConfig";
+import { categoryEmoji } from "@/lib/categoryConfig";
 import { categories, habits } from "@/data/habits";
 import {
   addXP,
@@ -95,17 +94,25 @@ const stateMessages: Record<CompanionMood, string> = {
   "Be Still":    "Be still and know that I am God. Rest in His grace today.",
 };
 
-const moodScoreGlow: Record<CompanionMood, string> = {
-  "Flourishing": "drop-shadow(0 0 28px rgba(45,106,79,0.55))",
-  "Faithful":    "drop-shadow(0 0 28px rgba(55,48,163,0.55))",
-  "Pressing On": "drop-shadow(0 0 28px rgba(146,64,14,0.50))",
-  "Be Still":    "drop-shadow(0 0 28px rgba(120,113,108,0.35))",
+const scoreColor: Record<CompanionMood, string> = {
+  "Flourishing": "text-forest-600",
+  "Faithful":    "text-indigo-600",
+  "Pressing On": "text-amber-600",
+  "Be Still":    "text-stone-400",
 };
 
-const ratingBadge: Record<RatingLabel, string> = {
-  Optimal:       "bg-forest-50 border-forest-200 text-forest-700 dark:bg-emerald-500/20 dark:border-emerald-400/40 dark:text-emerald-300",
-  "Sub Optimal": "bg-amber-50 border-amber-200 text-amber-700 dark:bg-indigo-500/20 dark:border-indigo-400/40 dark:text-indigo-300",
-  "Not Optimal": "bg-terra-100 border-terra-200 text-terra-600 dark:bg-rose-500/20 dark:border-rose-400/40 dark:text-rose-300",
+const ratingBarBadge: Record<RatingLabel, string> = {
+  Optimal:       "bg-forest-600 text-white",
+  "Sub Optimal": "bg-indigo-500 text-white",
+  "Not Optimal": "bg-terra-500 text-white",
+};
+
+const pillarBarConfig: Record<Category, { barColor: string; glow: string; nameColor: string }> = {
+  Spiritual:   { barColor: "bg-violet-400",  glow: "rgba(167,139,250,0.5)", nameColor: "text-violet-600" },
+  Mental:      { barColor: "bg-blue-400",    glow: "rgba(96,165,250,0.5)",  nameColor: "text-blue-600" },
+  Physical:    { barColor: "bg-emerald-400", glow: "rgba(52,211,153,0.5)",  nameColor: "text-forest-600" },
+  Relational:  { barColor: "bg-pink-400",    glow: "rgba(244,114,182,0.5)", nameColor: "text-pink-600" },
+  Stewardship: { barColor: "bg-amber-400",   glow: "rgba(251,146,60,0.5)",  nameColor: "text-amber-600" },
 };
 
 const pillarConfig: Record<Category, { colorClass: string; glow: string; hex: string }> = {
@@ -132,13 +139,6 @@ const pillarCelebrationVerse: Record<Category, { quote: string; ref: string }> =
   Stewardship: { quote: "Well done, good and faithful servant.", ref: "Matthew 25:21" },
 };
 
-const growthMessages: Record<Category, string> = {
-  Physical:    "Your body is your foundation — even one small move today counts.",
-  Mental:      "A quiet moment to reflect will pay dividends all week.",
-  Spiritual:   "Reconnecting with purpose shifts everything downstream.",
-  Relational:  "One genuine exchange can change the texture of your whole day.",
-  Stewardship: "One focused hour of faithful work beats three distracted ones.",
-};
 
 const pillarStrengthLabel = (rate: number) => {
   if (rate >= 80) return { text: "Strong",       cls: "text-forest-600 dark:text-emerald-400" };
@@ -211,11 +211,9 @@ export default function Home() {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const [activeTab, setActiveTab] = useState<NavTab>("home");
   const [selectedHabitIds, setSelectedHabitIds] = useState<string[]>([]);
-  const [displayScore, setDisplayScore] = useState(0);
   const [nudgeDismissed, setNudgeDismissed] = useState(false);
   const [notifAsked, setNotifAsked] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  const [showTapHint, setShowTapHint] = useState(true);
   const [isSabbath, setIsSabbath] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [rawStats, setRawStats] = useState<RawStats>(defaultRawStats);
@@ -302,27 +300,6 @@ export default function Home() {
     [rawStats],
   );
 
-  useEffect(() => {
-    if (activeTab !== "home") return;
-    setDisplayScore(0);
-    const target = summary.score;
-    const steps = 32;
-    const stepMs = 1100 / steps;
-    let step = 0;
-    const timer = setInterval(() => {
-      step++;
-      const t = step / steps;
-      const eased = 1 - Math.pow(1 - t, 3);
-      setDisplayScore(Math.round(eased * target));
-      if (step >= steps) { setDisplayScore(target); clearInterval(timer); }
-    }, stepMs);
-    return () => clearInterval(timer);
-  }, [summary.score, activeTab]);
-
-  useEffect(() => {
-    const t = setTimeout(() => setShowTapHint(false), 4000);
-    return () => clearTimeout(t);
-  }, []);
 
   useEffect(() => {
     const weakest = [...summary.categoryScores].sort((a, b) => a.completionRate - b.completionRate)[0];
@@ -583,22 +560,68 @@ export default function Home() {
                     </p>
                   </motion.div>
 
-                  <div className="text-center">
-                    <div className="flex items-center justify-center" style={{ filter: moodScoreGlow[mood] }}>
-                      <span className="font-serif text-8xl font-black tracking-tight text-stone-900 tabular-nums dark:text-white">
-                        {displayScore}
-                      </span>
-                      <span className="ml-2 self-center text-3xl font-semibold text-stone-400 dark:text-white/35">/ 100</span>
+                  {/* ── Score bar section ─────────────────────── */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.25, duration: 0.5 }}
+                    className="mt-2 w-full"
+                  >
+                    <div className="mb-2 flex items-center justify-between">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-white/30">
+                        Today&apos;s Stewardship
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <span className={`font-serif font-black text-lg ${scoreColor[mood]}`}>
+                          {summary.score}
+                        </span>
+                        <span className="text-stone-300">·</span>
+                        <span className={`text-sm font-semibold ${scoreColor[mood]}`}>
+                          {stateLabels[mood]}
+                        </span>
+                      </div>
                     </div>
-                    <div className="mt-3 flex flex-col items-center">
-                      <span className={`rounded-full border px-4 py-1 text-xs font-bold uppercase tracking-widest ${ratingBadge[summary.rating.label]}`}>
+
+                    <div className="h-5 w-full overflow-hidden rounded-full bg-stone-100 shadow-inner dark:bg-white/10">
+                      <motion.div
+                        className="relative h-full rounded-full"
+                        style={{
+                          background: "linear-gradient(to right, #40916c, #60a5fa, #a78bfa, #fb923c, #f472b4)",
+                          backgroundSize: "200% 100%",
+                        }}
+                        initial={{ width: "0%" }}
+                        animate={{ width: `${summary.score}%` }}
+                        transition={{ type: "tween", duration: 1.2, ease: [0.34, 1.56, 0.64, 1], delay: 0.4 }}
+                      >
+                        <motion.div
+                          className="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                          animate={{ x: ["-100%", "200%"] }}
+                          transition={{ type: "tween", duration: 1.8, delay: 1.6, ease: "easeInOut" }}
+                        />
+                      </motion.div>
+                    </div>
+
+                    <div className="mt-2 flex justify-center">
+                      <span className={`inline-flex rounded-full px-4 py-1.5 text-xs font-black uppercase tracking-wider ${ratingBarBadge[summary.rating.label]}`}>
                         {summary.rating.label}
                       </span>
-                      <p className="mt-2 max-w-[240px] text-center text-[11px] leading-5 text-stone-400 dark:text-white/30">
-                        This score reflects stewardship — not your worth before God.
-                      </p>
                     </div>
-                  </div>
+
+                    <p className="mt-2 text-center text-[11px] leading-5 text-stone-400 dark:text-white/30">
+                      This reflects stewardship — not your worth before God.
+                    </p>
+
+                    {summary.isFaithfulDay && (
+                      <motion.p
+                        initial={{ opacity: 0, y: 4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 1.4, type: "tween" }}
+                        className="mt-3 text-center font-serif text-xs font-semibold text-forest-600 dark:text-emerald-400"
+                      >
+                        ✦ You showed up across your whole life today.
+                      </motion.p>
+                    )}
+                  </motion.div>
 
                   <DailyIntentionCard
                     intentions={intentions.intentions}
@@ -609,44 +632,54 @@ export default function Home() {
                     onRequestNotifications={handleRequestNotifications}
                   />
 
+                  {/* ── Five pillar bars ───────────────────────── */}
                   <div className="w-full">
-                    <p className="mb-4 text-[0.58rem] font-bold uppercase tracking-[0.32em] text-stone-400 dark:text-white/28">Life Areas</p>
-                    <div className="flex flex-wrap justify-center gap-5">
-                      {summary.categoryScores.map((cs, i) => (
-                        <AreaRing
-                          key={cs.category}
-                          name={cs.category}
-                          percent={cs.completionRate}
-                          color={categoryConfig[cs.category].accent}
-                          delay={i * 0.08}
-                          isSelected={selectedCategory === cs.category}
-                          onClick={() => setSelectedCategory(cs.category)}
-                        />
-                      ))}
-                    </div>
-                    <AnimatePresence>
-                      {showTapHint && (
-                        <motion.p
-                          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                          transition={{ duration: 0.5 }}
-                          className="mt-2 text-center text-[10px] text-stone-400 dark:text-white/25"
-                        >
-                          tap any area to explore
-                        </motion.p>
+                    <div className="mb-3 mt-3 flex items-center justify-between">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-stone-400 dark:text-white/30">
+                        Five Pillars
+                      </p>
+                      {summary.isFaithfulDay && (
+                        <p className="text-[10px] font-bold text-forest-600 dark:text-emerald-400">
+                          All present ✦
+                        </p>
                       )}
-                    </AnimatePresence>
+                    </div>
+                    <div className="space-y-3">
+                      {summary.categoryScores.map((cs, i) => {
+                        const pb = pillarBarConfig[cs.category];
+                        return (
+                          <motion.div
+                            key={cs.category}
+                            initial={{ opacity: 0, x: -8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.6 + i * 0.08, type: "tween", duration: 0.4 }}
+                            className="flex items-center gap-3"
+                          >
+                            <div className="flex w-28 shrink-0 items-center gap-2">
+                              <span className="text-sm">{categoryEmoji[cs.category]}</span>
+                              <span className={`text-xs font-bold ${pb.nameColor}`}>{cs.category}</span>
+                            </div>
+                            <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-stone-100 dark:bg-white/10">
+                              <motion.div
+                                className={`h-full rounded-full ${pb.barColor}`}
+                                style={{ boxShadow: `0 0 8px ${pb.glow}` }}
+                                initial={{ width: "0%" }}
+                                animate={{ width: `${cs.completionRate}%` }}
+                                transition={{ type: "tween", duration: 0.8, delay: 0.7 + i * 0.08, ease: "easeOut" }}
+                              />
+                            </div>
+                            <div className="w-12 shrink-0 text-right">
+                              {cs.presenceAchieved ? (
+                                <span className="text-sm text-forest-500 dark:text-emerald-400" title="Showing up here">✦</span>
+                              ) : (
+                                <span className="text-xs text-stone-400 dark:text-white/30">{Math.round(cs.completionRate)}%</span>
+                              )}
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
                   </div>
-
-                  {summary.growthArea && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
-                      className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 shadow-sm dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none"
-                    >
-                      <p className="mb-1 text-[0.6rem] font-bold uppercase tracking-widest text-terra-500 dark:text-white/30">📍 Growth opportunity</p>
-                      <p className="font-serif text-sm font-bold text-stone-800 dark:text-white">{summary.growthArea} is your focus area today</p>
-                      <p className="mt-1 text-xs leading-5 text-stone-500 dark:text-white/45">{growthMessages[summary.growthArea]}</p>
-                    </motion.div>
-                  )}
 
                   {!nudgeDismissed && (
                     <SmartNudge
