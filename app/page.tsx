@@ -6,6 +6,8 @@ import { AreaRing } from "@/components/AreaRing";
 import { BottomNav, type NavTab } from "@/components/BottomNav";
 import { CategorySheet } from "@/components/CategorySheet";
 import { Companion } from "@/components/Companion";
+import { DailyIntentionCard } from "@/components/DailyIntentionCard";
+import { IntentionPicker } from "@/components/IntentionPicker";
 import { NotificationSetup } from "@/components/NotificationSetup";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { PillarBar } from "@/components/PillarBar";
@@ -34,17 +36,31 @@ import {
   saveTodayHabits,
 } from "@/lib/dailyStorage";
 import {
+  addIntention,
+  createEmptyIntentions,
+  DEFAULT_REMINDER_TIMES,
+  loadIntentions,
+  removeIntention,
+  saveIntentions,
+  updateCustomTimeForAll,
+} from "@/lib/intentions";
+import { getIntentionMessage } from "@/lib/intentionMessages";
+import { scheduleIntentionReminders } from "@/lib/reminderScheduler";
+import {
   NOTIF_PERMISSION_KEY,
   canNotify,
+  requestNotificationPermission,
   scheduleReminderNotification,
 } from "@/lib/notifications";
 import { buildScoreSummary } from "@/lib/scoring";
 import type {
   Category,
   CompanionMood,
+  DailyIntentions,
   DailyRecord,
   Habit,
   OnboardingAnswers,
+  PinnedIntention,
   RatingLabel,
 } from "@/types/optima";
 
@@ -204,6 +220,8 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
   const [rawStats, setRawStats] = useState<RawStats>(defaultRawStats);
   const [history, setHistory] = useState<DailyRecord[]>([]);
+  const [intentions, setIntentions] = useState<DailyIntentions>(createEmptyIntentions);
+  const [showIntentionPicker, setShowIntentionPicker] = useState(false);
   const isPremium = false;
 
   // Check-in sub-view state
@@ -256,6 +274,12 @@ export default function Home() {
 
     setHistory(loadHistory());
     setRawStats(loadGameStats());
+
+    const savedIntentions = loadIntentions();
+    setIntentions(savedIntentions);
+    if (savedIntentions.intentions.length > 0) {
+      scheduleIntentionReminders(savedIntentions.intentions);
+    }
   }, []);
 
   useEffect(() => {
@@ -308,6 +332,45 @@ export default function Home() {
     const tip = getTipForCategory(weakest.category, dayOfYear);
     if (tip) scheduleReminderNotification(weakest.category, tip, "19:00", rawStats.streak);
   }, [summary.categoryScores]);
+
+  const handleAddIntention = (habit: Habit) => {
+    const intention: PinnedIntention = {
+      habitId: habit.id,
+      habitLabel: habit.label,
+      habitKind: habit.kind,
+      category: habit.category,
+      pinnedAt: new Date().toISOString(),
+      reminderTimes: DEFAULT_REMINDER_TIMES,
+    };
+    const updated = addIntention(intention, intentions);
+    if (updated) {
+      saveIntentions(updated);
+      setIntentions(updated);
+      scheduleIntentionReminders(updated.intentions);
+    }
+  };
+
+  const handleRemoveIntention = (habitId: string) => {
+    const updated = removeIntention(habitId, intentions);
+    saveIntentions(updated);
+    setIntentions(updated);
+    scheduleIntentionReminders(updated.intentions);
+  };
+
+  const handleUpdateTime = (time: string) => {
+    const updated = updateCustomTimeForAll(time, intentions);
+    saveIntentions(updated);
+    setIntentions(updated);
+    scheduleIntentionReminders(updated.intentions);
+  };
+
+  const handleRequestNotifications = async (): Promise<boolean> => {
+    const granted = await requestNotificationPermission();
+    if (granted && intentions.intentions.length > 0) {
+      scheduleIntentionReminders(intentions.intentions);
+    }
+    return granted;
+  };
 
   const completeOnboarding = (answers: OnboardingAnswers) => {
     window.localStorage.setItem(ONBOARDING_COMPLETED_KEY, "true");
@@ -415,6 +478,13 @@ export default function Home() {
     (h) => h.kind === "positive" && sessionAnswers[h.id] === true,
   );
 
+  // Home tab Opti message — intention-specific when intentions are set
+  const homeHour = new Date().getHours();
+  const homeTimeStr = homeHour < 12 ? "08:00" : homeHour < 17 ? "12:00" : "19:00";
+  const optiHomeMessage = intentions.intentions.length > 0
+    ? getIntentionMessage(intentions.intentions[0], homeTimeStr)
+    : stateMessages[mood];
+
   // Pillar selection speech bubble
   const hour = new Date().getHours();
   const optiMessage = hour < 12
@@ -509,7 +579,7 @@ export default function Home() {
                     className="w-full rounded-2xl border border-stone-200 bg-white/80 px-5 py-3 shadow-sm dark:border-white/10 dark:bg-white/[0.07] dark:shadow-none"
                   >
                     <p className="text-center font-serif text-base italic leading-6 text-stone-600 dark:text-white/70">
-                      {stateMessages[mood]}
+                      {optiHomeMessage}
                     </p>
                   </motion.div>
 
@@ -529,6 +599,15 @@ export default function Home() {
                       </p>
                     </div>
                   </div>
+
+                  <DailyIntentionCard
+                    intentions={intentions.intentions}
+                    isPremium={isPremium}
+                    onAdd={() => setShowIntentionPicker(true)}
+                    onRemove={handleRemoveIntention}
+                    onUpdateTime={handleUpdateTime}
+                    onRequestNotifications={handleRequestNotifications}
+                  />
 
                   <div className="w-full">
                     <p className="mb-4 text-[0.58rem] font-bold uppercase tracking-[0.32em] text-stone-400 dark:text-white/28">Life Areas</p>
@@ -1084,6 +1163,19 @@ export default function Home() {
       </AnimatePresence>
       <AnimatePresence>
         {showSettings && <SettingsSheet onClose={() => setShowSettings(false)} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showIntentionPicker && (
+          <IntentionPicker
+            allHabits={habits}
+            currentIntentions={intentions.intentions}
+            onSelect={(habit) => {
+              handleAddIntention(habit);
+              setShowIntentionPicker(false);
+            }}
+            onClose={() => setShowIntentionPicker(false)}
+          />
+        )}
       </AnimatePresence>
 
       <div className="pointer-events-none fixed bottom-16 left-0 right-0 z-10 h-12 bg-gradient-to-t from-parchment-100 to-transparent dark:from-[#07070a]" />

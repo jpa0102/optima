@@ -85,6 +85,23 @@ export type DailyRecord = {
   weakestPillar?: Category;
 };
 
+export type PinnedIntention = {
+  habitId: string;
+  habitLabel: string;
+  habitKind: "positive" | "drain";
+  category: Category;
+  pinnedAt: string;
+  reminderTimes: string[];
+  customTime?: string;
+};
+
+export type DailyIntentions = {
+  date: string;
+  intentions: PinnedIntention[];
+  isPremium: boolean;
+  maxIntentions: number;
+};
+
 export type AppTab = "home" | "check-in" | "history";
 
 export type Level = {
