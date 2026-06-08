@@ -445,6 +445,10 @@ export default function Home() {
     return <OnboardingFlow onComplete={completeOnboarding} />;
   }
 
+  if (isSabbath) {
+    return <SabbathScreen />;
+  }
+
   const mood = summary.rating.companionMood;
   const completedPillarsCount = summary.categoryScores.filter((cs) => cs.presenceAchieved).length;
 
@@ -521,11 +525,8 @@ export default function Home() {
           {/* ── HOME TAB ─────────────────────────────────────────────── */}
           {activeTab === "home" && (
             <div className="flex flex-col items-center pb-4">
-              {isSabbath ? (
-                <SabbathScreen />
-              ) : (
-                <>
-                  {!notifAsked && <NotificationSetup onComplete={() => setNotifAsked(true)} />}
+              <>
+                {!notifAsked && <NotificationSetup onComplete={() => setNotifAsked(true)} />}
 
                   {/* 1. Opti — center stage */}
                   <div className="mt-4 mb-1 w-full">
@@ -705,8 +706,7 @@ export default function Home() {
                   >
                     {selectedHabitIds.length === 0 ? "Begin today's check-in →" : "Continue today's check-in →"}
                   </motion.button>
-                </>
-              )}
+              </>
             </div>
           )}
 
