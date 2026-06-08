@@ -10,6 +10,7 @@ import { IntentionPicker } from "@/components/IntentionPicker";
 import { NotificationSetup } from "@/components/NotificationSetup";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { PillarBar } from "@/components/PillarBar";
+import { FaithfulDayCelebration } from "@/components/FaithfulDayCelebration";
 import { SabbathScreen } from "@/components/SabbathScreen";
 import { SettingsSheet } from "@/components/SettingsSheet";
 import { SmartNudge } from "@/components/SmartNudge";
@@ -28,6 +29,7 @@ import {
   clearTodayHabits,
   getDayLabel,
   getSavedDate,
+  getTodayString,
   hasPreviousDayToArchive,
   loadHistory,
   loadRawSavedHabits,
@@ -229,6 +231,7 @@ export default function Home() {
   const [history, setHistory] = useState<DailyRecord[]>([]);
   const [intentions, setIntentions] = useState<DailyIntentions>(createEmptyIntentions);
   const [showIntentionPicker, setShowIntentionPicker] = useState(false);
+  const [showFaithfulCelebration, setShowFaithfulCelebration] = useState(false);
   const isPremium = false;
 
   // Check-in sub-view state
@@ -303,6 +306,17 @@ export default function Home() {
   }, []);
 
   const summary = useMemo(() => buildScoreSummary(selectedHabitIds), [selectedHabitIds]);
+
+  useEffect(() => {
+    if (!summary.isFaithfulDay) return;
+    if (!hasCompletedOnboarding) return;
+    const today = getTodayString();
+    const key = `optima_faithful_celebrated_${today}`;
+    if (localStorage.getItem(key) !== "true") {
+      setShowFaithfulCelebration(true);
+      localStorage.setItem(key, "true");
+    }
+  }, [summary.isFaithfulDay, hasCompletedOnboarding]);
 
   const gameStats = useMemo(
     () => getGameStats(rawStats.totalXP, rawStats.streak, rawStats.longestStreak, rawStats.lastCheckinDate),
@@ -499,6 +513,14 @@ export default function Home() {
                 title="Simulate new day (debug)"
               >
                 ⏭ New day
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowFaithfulCelebration(true)}
+                className="rounded-full border border-stone-200 bg-stone-50 px-2.5 py-1 text-[10px] text-stone-300 transition hover:text-stone-500 dark:border-white/10 dark:bg-white/[0.06] dark:text-white/20"
+                title="Test faithful day celebration (debug)"
+              >
+                ⟳ test celebration
               </button>
               <button
                 type="button"
@@ -1189,6 +1211,15 @@ export default function Home() {
         <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
 
+      <AnimatePresence>
+        {showFaithfulCelebration && (
+          <FaithfulDayCelebration
+            pillarsPresent={summary.pillarsPresent}
+            score={summary.score}
+            onClose={() => setShowFaithfulCelebration(false)}
+          />
+        )}
+      </AnimatePresence>
       <AnimatePresence>
         {selectedCategory && (
           <CategorySheet
