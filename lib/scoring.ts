@@ -9,7 +9,7 @@ import type {
 } from "@/types/optima";
 
 const VOLUME_CAP = 5;
-const HEART_HABIT_IDS = ["morning-prayer", "evening-examen"];
+const HEART_HABIT_IDS = ["morning-prayer", "daily-scripture-reading"];
 
 const clampScore = (score: number) =>
   Math.min(100, Math.max(0, Math.round(score)));

@@ -11,6 +11,7 @@ import { NotificationSetup } from "@/components/NotificationSetup";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { PillarBar } from "@/components/PillarBar";
 import { FaithfulDayCelebration } from "@/components/FaithfulDayCelebration";
+import { getHabitsForToday } from "@/lib/habitFiltering";
 import { SabbathScreen } from "@/components/SabbathScreen";
 import { SettingsSheet } from "@/components/SettingsSheet";
 import { SmartNudge } from "@/components/SmartNudge";
@@ -226,6 +227,7 @@ export default function Home() {
   const [notifAsked, setNotifAsked] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [isSabbath, setIsSabbath] = useState(false);
+  const [sabbathDay, setSabbathDay] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [rawStats, setRawStats] = useState<RawStats>(defaultRawStats);
   const [history, setHistory] = useState<DailyRecord[]>([]);
@@ -252,8 +254,9 @@ export default function Home() {
     const asked = window.localStorage.getItem(NOTIF_PERMISSION_KEY) === "asked";
     setNotifAsked(asked);
 
-    const sabbathDay = parseInt(window.localStorage.getItem("optima_sabbath_day") ?? "0", 10);
-    setIsSabbath(new Date().getDay() === sabbathDay);
+    const storedSabbathDay = parseInt(window.localStorage.getItem("optima_sabbath_day") ?? "0", 10);
+    setSabbathDay(storedSabbathDay);
+    setIsSabbath(new Date().getDay() === storedSabbathDay);
 
     if (hasPreviousDayToArchive()) {
       const savedDate = getSavedDate()!;
@@ -305,7 +308,15 @@ export default function Home() {
     return () => { if (reactionTimerRef.current) clearTimeout(reactionTimerRef.current); };
   }, []);
 
-  const summary = useMemo(() => buildScoreSummary(selectedHabitIds), [selectedHabitIds]);
+  const todayHabits = useMemo(
+    () => getHabitsForToday(habits, new Date(), sabbathDay),
+    [sabbathDay],
+  );
+
+  const summary = useMemo(
+    () => buildScoreSummary(selectedHabitIds, todayHabits),
+    [selectedHabitIds, todayHabits],
+  );
 
   useEffect(() => {
     if (!summary.isFaithfulDay) return;
@@ -395,8 +406,9 @@ export default function Home() {
   };
 
   function startPillarSession(category: Category) {
-    const positive = habits.filter((h) => h.category === category && h.kind === "positive");
-    const drains = habits.filter((h) => h.category === category && h.kind === "drain");
+    const pillarHabits = todayHabits.filter((h) => h.category === category);
+    const positive = pillarHabits.filter((h) => h.kind === "positive");
+    const drains = pillarHabits.filter((h) => h.kind === "drain");
     if (reactionTimerRef.current) clearTimeout(reactionTimerRef.current);
     setActivePillar(category);
     setSessionHabits([...positive, ...drains]);
@@ -787,48 +799,56 @@ export default function Home() {
                     </div>
 
                     {/* Pillar cards */}
-                    {categories.map((cat) => {
-                      const cs = summary.categoryScores.find((s) => s.category === cat)!;
-                      const isComplete = cs.presenceAchieved;
-                      const answeredCount = activePillar === cat ? Object.keys(sessionAnswers).length : 0;
-                      const totalHabits = habits.filter((h) => h.category === cat).length;
-                      const isInProgress = activePillar === cat && answeredCount > 0 && !isComplete;
+                    {(() => {
+                      const isSunday = new Date().getDay() === 0;
+                      return categories.map((cat) => {
+                        const cs = summary.categoryScores.find((s) => s.category === cat)!;
+                        const isComplete = cs.presenceAchieved;
+                        const answeredCount = activePillar === cat ? Object.keys(sessionAnswers).length : 0;
+                        const todayCount = todayHabits.filter((h) => h.category === cat).length;
+                        const isInProgress = activePillar === cat && answeredCount > 0 && !isComplete;
 
-                      return (
-                        <motion.button
-                          key={cat}
-                          type="button"
-                          onClick={() => startPillarSession(cat)}
-                          whileTap={{ scale: 0.98 }}
-                          className="mb-3 flex w-full items-center gap-4 rounded-[1.5rem] border border-stone-100 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/[0.06]"
-                        >
-                          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl ${pillarSubtleBg[cat]}`}>
-                            {categoryEmoji[cat]}
-                          </div>
-                          <div className="min-w-0 flex-1 text-left">
-                            <p className="font-black text-sm text-stone-800 dark:text-white">{cat}</p>
-                            {isComplete ? (
-                              <p className="text-xs font-semibold text-forest-600 dark:text-emerald-400">✦ Showing up here today</p>
-                            ) : isInProgress ? (
-                              <p className="text-xs text-amber-600">{answeredCount} of {totalHabits} habits answered</p>
-                            ) : (
-                              <p className="text-xs text-stone-400">Tap to begin</p>
-                            )}
-                          </div>
-                          <div className="shrink-0">
-                            {isComplete ? (
-                              <div className="flex h-6 w-6 items-center justify-center rounded-full bg-forest-100">
-                                <span className="text-xs font-black text-forest-600">✓</span>
-                              </div>
-                            ) : isInProgress ? (
-                              <span className="block h-2.5 w-2.5 rounded-full bg-amber-400" />
-                            ) : (
-                              <span className="text-xl text-stone-300">›</span>
-                            )}
-                          </div>
-                        </motion.button>
-                      );
-                    })}
+                        return (
+                          <motion.button
+                            key={cat}
+                            type="button"
+                            onClick={() => startPillarSession(cat)}
+                            whileTap={{ scale: 0.98 }}
+                            className="mb-3 flex w-full items-center gap-4 rounded-[1.5rem] border border-stone-100 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/[0.06]"
+                          >
+                            <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-xl ${pillarSubtleBg[cat]}`}>
+                              {categoryEmoji[cat]}
+                            </div>
+                            <div className="min-w-0 flex-1 text-left">
+                              <p className="font-black text-sm text-stone-800 dark:text-white">{cat}</p>
+                              {isComplete ? (
+                                <p className="text-xs font-semibold text-forest-600 dark:text-emerald-400">✦ Showing up here today</p>
+                              ) : isInProgress ? (
+                                <p className="text-xs text-amber-600">{answeredCount} of {todayCount} habits answered</p>
+                              ) : (
+                                <>
+                                  <p className="text-[10px] text-stone-400">{todayCount} to check today</p>
+                                  {cat === "Spiritual" && isSunday && (
+                                    <p className="text-[9px] font-bold text-violet-600 mt-0.5">✦ Sunday — 2 extra weekly practices</p>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                            <div className="shrink-0">
+                              {isComplete ? (
+                                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-forest-100">
+                                  <span className="text-xs font-black text-forest-600">✓</span>
+                                </div>
+                              ) : isInProgress ? (
+                                <span className="block h-2.5 w-2.5 rounded-full bg-amber-400" />
+                              ) : (
+                                <span className="text-xl text-stone-300">›</span>
+                              )}
+                            </div>
+                          </motion.button>
+                        );
+                      });
+                    })()}
 
                     {/* Bottom CTA */}
                     <div className="mt-2">
