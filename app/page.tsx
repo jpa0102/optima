@@ -8,6 +8,7 @@ import { Companion } from "@/components/Companion";
 import { DailyIntentionCard } from "@/components/DailyIntentionCard";
 import { IntentionPicker } from "@/components/IntentionPicker";
 import { NotificationSetup } from "@/components/NotificationSetup";
+import { MyPracticesScreen } from "@/components/MyPracticesScreen";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { PillarBar } from "@/components/PillarBar";
 import { FaithfulDayCelebration } from "@/components/FaithfulDayCelebration";
@@ -55,6 +56,13 @@ import {
   scheduleReminderNotification,
 } from "@/lib/notifications";
 import { buildScoreSummary } from "@/lib/scoring";
+import {
+  getAdaptiveCompanionMessage,
+  getDefaultProfile,
+  getPersonalizedHabits,
+  loadUserProfile,
+  saveUserProfile,
+} from "@/lib/userProfile";
 import type {
   Category,
   CompanionMood,
@@ -64,6 +72,7 @@ import type {
   OnboardingAnswers,
   PinnedIntention,
   RatingLabel,
+  UserProfile,
 } from "@/types/optima";
 
 const ONBOARDING_COMPLETED_KEY = "optima_onboarding_completed";
@@ -99,12 +108,6 @@ const stateColors: Record<CompanionMood, string> = {
   "Be Still":    "text-stone-400 dark:text-slate-400",
 };
 
-const stateMessages: Record<CompanionMood, string> = {
-  "Flourishing": "Walking in step with the Spirit today. Abide in this.",
-  "Faithful":    "Steady and present. God sees your faithfulness.",
-  "Pressing On": "He who began a good work in you will complete it. Keep going.",
-  "Be Still":    "Be still and know that I am God. Rest in His grace today.",
-};
 
 const scoreColor: Record<CompanionMood, string> = {
   "Flourishing": "text-forest-600",
@@ -234,6 +237,9 @@ export default function Home() {
   const [intentions, setIntentions] = useState<DailyIntentions>(createEmptyIntentions);
   const [showIntentionPicker, setShowIntentionPicker] = useState(false);
   const [showFaithfulCelebration, setShowFaithfulCelebration] = useState(false);
+  const [showMyPractices, setShowMyPractices] = useState(false);
+  const [showProfilePrompt, setShowProfilePrompt] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile>(getDefaultProfile);
   const isPremium = false;
 
   // Check-in sub-view state
@@ -250,6 +256,11 @@ export default function Home() {
     const completed = window.localStorage.getItem(ONBOARDING_COMPLETED_KEY) === "true";
     setHasCompletedOnboarding(completed);
     setHasCheckedOnboarding(true);
+
+    const savedProfile = loadUserProfile();
+    setUserProfile(savedProfile);
+    const profileCompleted = window.localStorage.getItem("optima_profile_completed") === "true";
+    if (completed && !profileCompleted) setShowProfilePrompt(true);
 
     const asked = window.localStorage.getItem(NOTIF_PERMISSION_KEY) === "asked";
     setNotifAsked(asked);
@@ -309,8 +320,8 @@ export default function Home() {
   }, []);
 
   const todayHabits = useMemo(
-    () => getHabitsForToday(habits, new Date(), sabbathDay),
-    [sabbathDay],
+    () => getHabitsForToday(getPersonalizedHabits(habits, userProfile), new Date(), sabbathDay),
+    [sabbathDay, userProfile],
   );
 
   const summary = useMemo(
@@ -388,6 +399,11 @@ export default function Home() {
     window.localStorage.setItem(ONBOARDING_ANSWERS_KEY, JSON.stringify(answers));
     setHasCompletedOnboarding(true);
     setActiveTab("home");
+  };
+
+  const handleUpdateProfile = (profile: UserProfile) => {
+    saveUserProfile(profile);
+    setUserProfile(profile);
   };
 
   const resetOnboarding = () => {
@@ -499,7 +515,7 @@ export default function Home() {
   const homeTimeStr = homeHour < 12 ? "08:00" : homeHour < 17 ? "12:00" : "19:00";
   const optiHomeMessage = intentions.intentions.length > 0
     ? getIntentionMessage(intentions.intentions[0], homeTimeStr)
-    : stateMessages[mood];
+    : getAdaptiveCompanionMessage(mood, userProfile);
 
   // Pillar selection speech bubble
   const hour = new Date().getHours();
@@ -536,9 +552,9 @@ export default function Home() {
               </button>
               <button
                 type="button"
-                onClick={() => setShowSettings(true)}
+                onClick={() => setShowMyPractices(true)}
                 className="flex h-8 w-8 items-center justify-center rounded-full bg-stone-100 text-stone-400 transition hover:text-stone-600 dark:bg-white/[0.06] dark:text-white/30 dark:hover:text-white/60"
-                aria-label="Settings"
+                aria-label="My Practices"
               >
                 ⚙
               </button>
@@ -561,6 +577,46 @@ export default function Home() {
             <div className="flex flex-col items-center pb-4">
               <>
                 {!notifAsked && <NotificationSetup onComplete={() => setNotifAsked(true)} />}
+
+                {showProfilePrompt && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    className="mb-3 w-full rounded-2xl border border-forest-200 bg-forest-50 px-4 py-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-forest-700">
+                          ✦ Personalize your experience
+                        </p>
+                        <p className="mt-0.5 text-[11px] leading-5 text-stone-500">
+                          Tell me a little about your life so I can walk alongside you better.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          localStorage.setItem("optima_profile_completed", "true");
+                          setShowProfilePrompt(false);
+                        }}
+                        className="shrink-0 text-xs text-stone-300 hover:text-stone-500"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowProfilePrompt(false);
+                        setShowMyPractices(true);
+                      }}
+                      className="mt-2 w-full rounded-full bg-forest-700 py-2 text-xs font-black text-white"
+                    >
+                      Set up my profile →
+                    </button>
+                  </motion.div>
+                )}
 
                   {/* 1. Opti — center stage */}
                   <div className="mt-4 mb-1 w-full">
@@ -1231,6 +1287,17 @@ export default function Home() {
         <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
 
+      <AnimatePresence>
+        {showMyPractices && (
+          <MyPracticesScreen
+            allHabits={habits}
+            userProfile={userProfile}
+            onUpdateProfile={handleUpdateProfile}
+            onOpenSettings={() => { setShowMyPractices(false); setShowSettings(true); }}
+            onClose={() => setShowMyPractices(false)}
+          />
+        )}
+      </AnimatePresence>
       <AnimatePresence>
         {showFaithfulCelebration && (
           <FaithfulDayCelebration

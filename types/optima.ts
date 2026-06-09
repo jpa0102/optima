@@ -1,3 +1,85 @@
+export type RelationshipStatus =
+  | "single"
+  | "dating"
+  | "engaged"
+  | "married"
+  | "widowed"
+  | "prefer_not_to_say";
+
+export type HasChildren = "yes" | "no";
+
+export type WorkSituation =
+  | "full_time_work"
+  | "business_owner"
+  | "part_time_work"
+  | "student"
+  | "stay_at_home_parent"
+  | "retired"
+  | "between_jobs"
+  | "ministry_full_time";
+
+export type AgeRange =
+  | "under_18"
+  | "18_24"
+  | "25_34"
+  | "35_44"
+  | "45_54"
+  | "55_64"
+  | "65_plus";
+
+export type FaithStage =
+  | "exploring"
+  | "new_believer"
+  | "growing"
+  | "established"
+  | "leader_or_mature";
+
+export type LifeSeason =
+  | "thriving"
+  | "busy_full"
+  | "transitioning"
+  | "quiet_steady"
+  | "hard_season"
+  | "grieving"
+  | "rebuilding";
+
+export type HealthConsideration =
+  | "none"
+  | "chronic_illness"
+  | "physical_limitation"
+  | "recovering_addiction"
+  | "mental_health"
+  | "pregnant_postpartum"
+  | "prefer_not_to_say";
+
+export type CurrentStruggle =
+  | "lust_purity"
+  | "pride_anger"
+  | "anxiety_worry"
+  | "comparison_envy"
+  | "addiction_substances"
+  | "social_media"
+  | "isolation_loneliness"
+  | "unforgiveness"
+  | "discontentment"
+  | "laziness_procrastination"
+  | "financial_stress"
+  | "doubt_unbelief";
+
+export type UserProfile = {
+  relationshipStatus: RelationshipStatus;
+  hasChildren: HasChildren;
+  workSituation: WorkSituation;
+  ageRange: AgeRange;
+  faithStage: FaithStage;
+  lifeSeason: LifeSeason;
+  healthConsideration: HealthConsideration;
+  currentStruggles: CurrentStruggle[];
+  customHabitIds: string[];
+  hiddenHabitIds: string[];
+  pinnedHabitIds: string[];
+};
+
 export type Category =
   | "Spiritual"
   | "Mental"
