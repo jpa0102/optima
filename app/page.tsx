@@ -9,7 +9,9 @@ import { DailyIntentionCard } from "@/components/DailyIntentionCard";
 import { IntentionPicker } from "@/components/IntentionPicker";
 import { NotificationSetup } from "@/components/NotificationSetup";
 import { DailyQuestCard } from "@/components/DailyQuestCard";
+import { LevelUpCelebration } from "@/components/LevelUpCelebration";
 import { MyPracticesScreen } from "@/components/MyPracticesScreen";
+import { QuestAcceptanceModal } from "@/components/QuestAcceptanceModal";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { PillarBar } from "@/components/PillarBar";
 import { FaithfulDayCelebration } from "@/components/FaithfulDayCelebration";
@@ -22,6 +24,7 @@ import { categoryEmoji } from "@/lib/categoryConfig";
 import { categories, habits } from "@/data/habits";
 import {
   addXP,
+  awardXP,
   getGameStats,
   loadGameStats,
   saveGameStats,
@@ -50,14 +53,18 @@ import {
 } from "@/lib/intentions";
 import { getIntentionMessage } from "@/lib/intentionMessages";
 import { scheduleIntentionReminders } from "@/lib/reminderScheduler";
+import { quests } from "@/data/quests";
 import {
   completeQuest,
   getQuestById,
   getTodayQuest,
   loadDailyQuest,
+  loadQuestHistory,
+  saveDailyQuest,
   skipQuest,
   startQuest,
 } from "@/lib/questSelector";
+import { STRUGGLE_LABELS } from "@/lib/userProfile";
 import {
   NOTIF_PERMISSION_KEY,
   canNotify,
@@ -80,9 +87,12 @@ import type {
   DailyQuest,
   DailyRecord,
   Habit,
+  Level,
   OnboardingAnswers,
   PinnedIntention,
+  Quest,
   RatingLabel,
+  ScoreSummary,
   UserProfile,
 } from "@/types/optima";
 
@@ -230,6 +240,29 @@ function getOptiReaction(habit: Habit, answered: boolean): string {
   return genericPositiveNo[Math.floor(Math.random() * genericPositiveNo.length)];
 }
 
+// ── Quest reason ────────────────────────────────────────────────────────────
+
+function getQuestReason(quest: Quest, profile: UserProfile, summary: ScoreSummary): string {
+  const matchingStruggles = quest.forStruggles?.filter((s) =>
+    profile.currentStruggles.includes(s),
+  );
+  if (matchingStruggles && matchingStruggles.length > 0) {
+    const label = STRUGGLE_LABELS[matchingStruggles[0]].toLowerCase();
+    return `Because you're working through ${label}.`;
+  }
+  const weakest = [...summary.categoryScores].sort((a, b) => a.completionRate - b.completionRate)[0];
+  if (weakest && quest.category === weakest.category) {
+    return `Because ${weakest.category} has been your weakest pillar recently.`;
+  }
+  if (quest.forLifeSeasons?.includes(profile.lifeSeason)) {
+    return "Because this fits the season you're in right now.";
+  }
+  if (quest.forFaithStages?.includes(profile.faithStage)) {
+    return "Because this fits where you are in your walk.";
+  }
+  return "Because today is a good day for this.";
+}
+
 // ── Component ───────────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -253,6 +286,9 @@ export default function Home() {
   const [userProfile, setUserProfile] = useState<UserProfile>(getDefaultProfile);
   const [dailyQuest, setDailyQuest] = useState<DailyQuest | null>(null);
   const [questBonusCategory, setQuestBonusCategory] = useState<Category | undefined>(undefined);
+  const [showQuestAcceptance, setShowQuestAcceptance] = useState(false);
+  const [questSwapsRemaining, setQuestSwapsRemaining] = useState(1);
+  const [levelUpData, setLevelUpData] = useState<{ old: Level; new: Level } | null>(null);
   const isPremium = false;
 
   // Check-in sub-view state
@@ -364,6 +400,15 @@ export default function Home() {
     if (questDetail && quest.status !== "completed") {
       scheduleQuestReminders(questDetail, quest);
     }
+
+    // Show acceptance modal on first open of the day
+    if (quest.status === "available") {
+      const today = getTodayString();
+      const acceptanceKey = `optima_quest_acceptance_shown_${today}`;
+      if (localStorage.getItem(acceptanceKey) !== "true") {
+        setShowQuestAcceptance(true);
+      }
+    }
   // Only re-select when onboarding completes or profile changes — not on every score update
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasCompletedOnboarding, userProfile]);
@@ -445,6 +490,38 @@ export default function Home() {
     setUserProfile(profile);
   };
 
+  const handleAcceptQuest = () => {
+    localStorage.setItem(`optima_quest_acceptance_shown_${getTodayString()}`, "true");
+    startQuest();
+    setShowQuestAcceptance(false);
+    const updated = loadDailyQuest();
+    if (updated) setDailyQuest(updated);
+  };
+
+  const handleSwapQuest = () => {
+    if (questSwapsRemaining <= 0) return;
+    const current = loadDailyQuest();
+    const recentIds = loadQuestHistory().slice(-7).map((q) => q.questId);
+    if (current?.questId) recentIds.push(current.questId);
+    const candidates = quests.filter((q) => !recentIds.includes(q.id));
+    if (candidates.length === 0) return;
+    const newQuestId = candidates[Math.floor(Math.random() * Math.min(3, candidates.length))].id;
+    const newDaily: DailyQuest = { date: getTodayString(), questId: newQuestId, status: "available" };
+    saveDailyQuest(newDaily);
+    setDailyQuest(newDaily);
+    setQuestSwapsRemaining(0);
+  };
+
+  const handleDeclineQuest = () => {
+    localStorage.setItem(`optima_quest_acceptance_shown_${getTodayString()}`, "true");
+    setShowQuestAcceptance(false);
+    if (dailyQuest) {
+      saveDailyQuest({ ...dailyQuest, status: "skipped" });
+      const updated = loadDailyQuest();
+      if (updated) setDailyQuest(updated);
+    }
+  };
+
   const handleStartQuest = () => {
     startQuest();
     const updated = loadDailyQuest();
@@ -454,14 +531,15 @@ export default function Home() {
   const handleCompleteQuest = () => {
     completeQuest();
     const updated = loadDailyQuest();
-    if (updated) {
-      setDailyQuest(updated);
-      const qd = getQuestById(updated.questId);
-      if (qd) {
-        setQuestBonusCategory(qd.category);
-        const stats = loadGameStats();
-        saveGameStats({ ...stats, totalXP: stats.totalXP + qd.pointsReward });
-        setRawStats(loadGameStats());
+    if (!updated) return;
+    setDailyQuest(updated);
+    const qd = getQuestById(updated.questId);
+    if (qd) {
+      setQuestBonusCategory(qd.category);
+      const xpResult = awardXP(qd.pointsReward, "daily_quest");
+      setRawStats(loadGameStats());
+      if (xpResult.leveledUp) {
+        setLevelUpData({ old: xpResult.oldLevel, new: xpResult.newLevel });
       }
     }
   };
@@ -844,8 +922,16 @@ export default function Home() {
                       {gameStats.currentStreak > 0 ? `✦ ${gameStats.currentStreak} day${gameStats.currentStreak !== 1 ? "s" : ""} walking` : "Begin your walk today"}
                     </span>
                     <span className="text-stone-300 dark:text-white/20">·</span>
-                    <span className="text-[10px] font-semibold text-stone-400 dark:text-white/30">
-                      Lv.{gameStats.level.tier} {gameStats.level.title}
+                    <span className="flex items-center gap-1">
+                      <span
+                        className="rounded-full px-1.5 py-0.5 text-[9px] font-black text-white"
+                        style={{ backgroundColor: gameStats.level.color }}
+                      >
+                        Lv.{gameStats.level.tier}
+                      </span>
+                      <span className="text-[10px] font-semibold" style={{ color: gameStats.level.color }}>
+                        {gameStats.level.title}
+                      </span>
                     </span>
                   </div>
 
@@ -1251,7 +1337,6 @@ export default function Home() {
                 {[
                   { icon: "✦", value: String(gameStats.currentStreak), label: "Days Walking", sub: `Best: ${gameStats.longestStreak}d`, iconCls: "text-terra-500 dark:text-amber-300" },
                   { icon: "⚡", value: String(gameStats.totalXP), label: "Total XP", sub: undefined as string | undefined, iconCls: "" },
-                  { icon: "🏆", value: `Lv.${gameStats.level.tier}`, label: gameStats.level.title, sub: undefined as string | undefined, iconCls: "" },
                 ].map((card) => (
                   <div key={card.label} className="flex flex-col items-center gap-1 rounded-2xl border border-stone-100 bg-white p-3 text-center shadow-sm dark:border-white/10 dark:bg-white/[0.06] dark:shadow-none">
                     <span className={`text-lg ${card.iconCls}`}>{card.icon}</span>
@@ -1260,15 +1345,33 @@ export default function Home() {
                     {card.sub && <span className="text-[0.55rem] text-stone-300 dark:text-white/25">{card.sub}</span>}
                   </div>
                 ))}
+                {/* Level stat card — styled with level color */}
+                <div
+                  className="flex flex-col items-center gap-1 rounded-2xl p-3 text-center shadow-sm"
+                  style={{ backgroundColor: `${gameStats.level.color}18`, border: `1px solid ${gameStats.level.color}40` }}
+                >
+                  <span className="text-lg">🏆</span>
+                  <span className="font-serif text-xl font-bold" style={{ color: gameStats.level.color }}>
+                    Lv.{gameStats.level.tier}
+                  </span>
+                  <span className="text-[0.6rem] font-bold" style={{ color: gameStats.level.color }}>
+                    {gameStats.level.title}
+                  </span>
+                </div>
               </div>
 
               <div className="rounded-2xl border border-stone-100 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-xs font-bold text-stone-700 dark:text-white">Level {gameStats.level.tier} · {gameStats.level.title}</span>
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-xs font-bold" style={{ color: gameStats.level.color }}>
+                    {gameStats.level.title}
+                  </span>
                   <span className="text-xs text-stone-400 dark:text-white/40">
                     {gameStats.xpToNextLevel > 0 ? `${gameStats.xpToNextLevel} XP to next level` : "Max level"}
                   </span>
                 </div>
+                <p className="mb-3 font-serif text-[11px] italic text-stone-500">
+                  &ldquo;{gameStats.level.description}&rdquo;
+                </p>
                 <div className="h-2.5 w-full overflow-hidden rounded-full bg-stone-100 dark:bg-white/10">
                   <motion.div
                     className="h-full rounded-full"
@@ -1278,6 +1381,9 @@ export default function Home() {
                     transition={{ type: "spring", stiffness: 55, damping: 13, delay: 0.2 }}
                   />
                 </div>
+                <p className="mt-2 text-[10px] italic text-stone-400 text-center">
+                  {gameStats.level.scripture}
+                </p>
               </div>
 
               <div>
@@ -1366,6 +1472,27 @@ export default function Home() {
         <BottomNav activeTab={activeTab} onTabChange={setActiveTab} />
       </div>
 
+      <AnimatePresence>
+        {showQuestAcceptance && dailyQuest && getQuestById(dailyQuest.questId) && (
+          <QuestAcceptanceModal
+            quest={getQuestById(dailyQuest.questId)!}
+            reasonShown={getQuestReason(getQuestById(dailyQuest.questId)!, userProfile, summary)}
+            swapsRemaining={questSwapsRemaining}
+            onAccept={handleAcceptQuest}
+            onSwap={handleSwapQuest}
+            onDecline={handleDeclineQuest}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {levelUpData && (
+          <LevelUpCelebration
+            oldLevel={levelUpData.old}
+            newLevel={levelUpData.new}
+            onClose={() => setLevelUpData(null)}
+          />
+        )}
+      </AnimatePresence>
       <AnimatePresence>
         {showMyPractices && (
           <MyPracticesScreen

@@ -3,12 +3,56 @@ import type { GameStats, Level } from "@/types/optima";
 export const GAME_STATS_KEY = "optima_game_stats";
 
 const LEVELS: Level[] = [
-  { tier: 1, title: "Starter",    minXP: 0,    maxXP: 199,   color: "#94a3b8" },
-  { tier: 2, title: "Building",   minXP: 200,  maxXP: 499,   color: "#34d399" },
-  { tier: 3, title: "Consistent", minXP: 500,  maxXP: 999,   color: "#60a5fa" },
-  { tier: 4, title: "Optimizing", minXP: 1000, maxXP: 1999,  color: "#a78bfa" },
-  { tier: 5, title: "Thriving",   minXP: 2000, maxXP: 3999,  color: "#f59e0b" },
-  { tier: 6, title: "Optimal",    minXP: 4000, maxXP: 99999, color: "#f97316" },
+  {
+    tier: 1, title: "Seeker", minXP: 0, maxXP: 99, color: "#94a3b8",
+    description: "I'm starting.",
+    scripture: "Seek the Lord while He may be found. — Isaiah 55:6",
+  },
+  {
+    tier: 2, title: "Sojourner", minXP: 100, maxXP: 299, color: "#a78bfa",
+    description: "I'm walking.",
+    scripture: "We are foreigners and strangers in your sight. — 1 Chronicles 29:15",
+  },
+  {
+    tier: 3, title: "Apprentice", minXP: 300, maxXP: 699, color: "#60a5fa",
+    description: "I'm learning.",
+    scripture: "The fear of the Lord is the beginning of wisdom. — Proverbs 9:10",
+  },
+  {
+    tier: 4, title: "Disciple", minXP: 700, maxXP: 1499, color: "#34d399",
+    description: "I'm following.",
+    scripture: "If anyone would come after me, let him deny himself, take up his cross daily, and follow me. — Luke 9:23",
+  },
+  {
+    tier: 5, title: "Steward", minXP: 1500, maxXP: 2999, color: "#fbbf24",
+    description: "I'm carrying weight.",
+    scripture: "It is required of stewards that they be found faithful. — 1 Corinthians 4:2",
+  },
+  {
+    tier: 6, title: "Servant", minXP: 3000, maxXP: 5999, color: "#fb923c",
+    description: "I'm serving others.",
+    scripture: "Whoever wants to become great among you must be your servant. — Matthew 20:26",
+  },
+  {
+    tier: 7, title: "Faithful", minXP: 6000, maxXP: 11999, color: "#f59e0b",
+    description: "I'm consistent.",
+    scripture: "Well done, good and faithful servant. — Matthew 25:21",
+  },
+  {
+    tier: 8, title: "Established", minXP: 12000, maxXP: 23999, color: "#d97706",
+    description: "I'm rooted.",
+    scripture: "Like a tree planted by streams of water, that yields its fruit in its season. — Psalm 1:3",
+  },
+  {
+    tier: 9, title: "Shepherd", minXP: 24000, maxXP: 49999, color: "#92400e",
+    description: "I'm leading others.",
+    scripture: "Be shepherds of God's flock. — 1 Peter 5:2",
+  },
+  {
+    tier: 10, title: "Living Sacrifice", minXP: 50000, maxXP: 999999, color: "#6b21a8",
+    description: "I'm fully His.",
+    scripture: "Present your bodies as a living sacrifice. — Romans 12:1",
+  },
 ];
 
 export function getLevel(totalXP: number): Level {
@@ -39,6 +83,23 @@ export function getGameStats(
     level,
     xpToNextLevel,
     xpProgressPercent,
+  };
+}
+
+export function awardXP(
+  amount: number,
+  _source: string,
+): { newTotalXP: number; leveledUp: boolean; oldLevel: Level; newLevel: Level } {
+  const raw = loadGameStats();
+  const oldLevel = getLevel(raw.totalXP);
+  const newTotalXP = raw.totalXP + amount;
+  const newLevel = getLevel(newTotalXP);
+  saveGameStats({ ...raw, totalXP: newTotalXP });
+  return {
+    newTotalXP,
+    leveledUp: newLevel.tier > oldLevel.tier,
+    oldLevel,
+    newLevel,
   };
 }
 

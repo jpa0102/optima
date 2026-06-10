@@ -225,6 +225,8 @@ export type Level = {
   minXP: number;
   maxXP: number;
   color: string;
+  description: string;
+  scripture: string;
 };
 
 export type GameStats = {
