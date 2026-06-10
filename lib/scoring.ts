@@ -61,6 +61,7 @@ function scorePillar(
   category: Category,
   selectedHabitIds: string[],
   habitList: Habit[],
+  questBonusCategory?: Category,
 ): PillarResult {
   const pillarHabits = habitList.filter((h) => h.category === category);
   const selectedPositive = pillarHabits.filter(
@@ -92,7 +93,8 @@ function scorePillar(
     40,
   );
 
-  const pillarScore = clampScore(40 + volumeBonus + heartBonus - drainPenalty);
+  const questBonus = questBonusCategory === category ? 10 : 0;
+  const pillarScore = clampScore(40 + volumeBonus + heartBonus - drainPenalty + questBonus);
 
   return { pillarScore, presenceAchieved: true };
 }
@@ -100,9 +102,10 @@ function scorePillar(
 export function calculateScore(
   selectedHabitIds: string[],
   habitList: Habit[] = habits,
+  questBonusCategory?: Category,
 ): number {
   const pillarResults = categories.map((category) =>
-    scorePillar(category, selectedHabitIds, habitList),
+    scorePillar(category, selectedHabitIds, habitList, questBonusCategory),
   );
 
   const pillarsPresent = pillarResults.filter((r) => r.presenceAchieved).length;
@@ -117,6 +120,7 @@ export function calculateScore(
 function buildCategoryScores(
   selectedHabitIds: string[],
   habitList: Habit[] = habits,
+  questBonusCategory?: Category,
 ): CategoryScore[] {
   return categories.map((category) => {
     const pillarHabits = habitList.filter((h) => h.category === category);
@@ -129,6 +133,7 @@ function buildCategoryScores(
       category,
       selectedHabitIds,
       habitList,
+      questBonusCategory,
     );
 
     return {
@@ -185,9 +190,10 @@ export function getDailyTakeaway(score: number): string {
 export function buildScoreSummary(
   selectedHabitIds: string[],
   habitList: Habit[] = habits,
+  questBonusCategory?: Category,
 ): ScoreSummary {
-  const score = calculateScore(selectedHabitIds, habitList);
-  const categoryScores = buildCategoryScores(selectedHabitIds, habitList);
+  const score = calculateScore(selectedHabitIds, habitList, questBonusCategory);
+  const categoryScores = buildCategoryScores(selectedHabitIds, habitList, questBonusCategory);
 
   const selectedHabits = habitList.filter((h) =>
     selectedHabitIds.includes(h.id),

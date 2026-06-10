@@ -1,4 +1,6 @@
 import type { CategoryTip } from "@/data/categoryTips";
+import type { DailyQuest, Quest } from "@/types/optima";
+import { loadDailyQuest } from "./questSelector";
 
 export const NOTIF_PERMISSION_KEY = "optima_notif_permission_asked";
 export const NOTIF_REMINDER_TIME_KEY = "optima_reminder_time";
@@ -47,6 +49,32 @@ export function scheduleReminderNotification(
   }, delay);
 
   sessionStorage.setItem("optima_reminder_timeout", String(timeoutId));
+}
+
+export function scheduleQuestReminders(quest: Quest, dailyQuest: DailyQuest): void {
+  if (!canNotify()) return;
+  if (dailyQuest.status === "completed") return;
+
+  const times = ["10:00", "14:00", "18:00"];
+  const now = new Date();
+
+  times.forEach((timeStr) => {
+    const [hours, minutes] = timeStr.split(":").map(Number);
+    const target = new Date();
+    target.setHours(hours, minutes, 0, 0);
+    if (target <= now) return;
+
+    const delay = target.getTime() - now.getTime();
+    setTimeout(() => {
+      const latest = loadDailyQuest();
+      if (latest?.status === "completed") return;
+      new Notification("Óptima · Today's quest ✦", {
+        body: quest.reminderMessage,
+        icon: "/icon-192.png",
+        tag: "optima-quest-reminder",
+      });
+    }, delay);
+  });
 }
 
 export function sendImmediateNudge(category: string, tip: CategoryTip): void {

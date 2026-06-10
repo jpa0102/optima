@@ -8,6 +8,7 @@ import { Companion } from "@/components/Companion";
 import { DailyIntentionCard } from "@/components/DailyIntentionCard";
 import { IntentionPicker } from "@/components/IntentionPicker";
 import { NotificationSetup } from "@/components/NotificationSetup";
+import { DailyQuestCard } from "@/components/DailyQuestCard";
 import { MyPracticesScreen } from "@/components/MyPracticesScreen";
 import { OnboardingFlow } from "@/components/OnboardingFlow";
 import { PillarBar } from "@/components/PillarBar";
@@ -50,9 +51,18 @@ import {
 import { getIntentionMessage } from "@/lib/intentionMessages";
 import { scheduleIntentionReminders } from "@/lib/reminderScheduler";
 import {
+  completeQuest,
+  getQuestById,
+  getTodayQuest,
+  loadDailyQuest,
+  skipQuest,
+  startQuest,
+} from "@/lib/questSelector";
+import {
   NOTIF_PERMISSION_KEY,
   canNotify,
   requestNotificationPermission,
+  scheduleQuestReminders,
   scheduleReminderNotification,
 } from "@/lib/notifications";
 import { buildScoreSummary } from "@/lib/scoring";
@@ -67,6 +77,7 @@ import type {
   Category,
   CompanionMood,
   DailyIntentions,
+  DailyQuest,
   DailyRecord,
   Habit,
   OnboardingAnswers,
@@ -240,6 +251,8 @@ export default function Home() {
   const [showMyPractices, setShowMyPractices] = useState(false);
   const [showProfilePrompt, setShowProfilePrompt] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile>(getDefaultProfile);
+  const [dailyQuest, setDailyQuest] = useState<DailyQuest | null>(null);
+  const [questBonusCategory, setQuestBonusCategory] = useState<Category | undefined>(undefined);
   const isPremium = false;
 
   // Check-in sub-view state
@@ -261,6 +274,16 @@ export default function Home() {
     setUserProfile(savedProfile);
     const profileCompleted = window.localStorage.getItem("optima_profile_completed") === "true";
     if (completed && !profileCompleted) setShowProfilePrompt(true);
+
+    // Load or select today's quest (needs category scores — use empty array on first load)
+    const existingQuest = loadDailyQuest();
+    if (existingQuest) {
+      setDailyQuest(existingQuest);
+      if (existingQuest.status === "completed") {
+        const qd = getQuestById(existingQuest.questId);
+        if (qd) setQuestBonusCategory(qd.category);
+      }
+    }
 
     const asked = window.localStorage.getItem(NOTIF_PERMISSION_KEY) === "asked";
     setNotifAsked(asked);
@@ -325,9 +348,25 @@ export default function Home() {
   );
 
   const summary = useMemo(
-    () => buildScoreSummary(selectedHabitIds, todayHabits),
-    [selectedHabitIds, todayHabits],
+    () => buildScoreSummary(selectedHabitIds, todayHabits, questBonusCategory),
+    [selectedHabitIds, todayHabits, questBonusCategory],
   );
+
+  useEffect(() => {
+    if (!hasCompletedOnboarding) return;
+    const quest = getTodayQuest(userProfile, summary.categoryScores);
+    setDailyQuest(quest);
+    if (quest.status === "completed") {
+      const qd = getQuestById(quest.questId);
+      if (qd) setQuestBonusCategory(qd.category);
+    }
+    const questDetail = getQuestById(quest.questId);
+    if (questDetail && quest.status !== "completed") {
+      scheduleQuestReminders(questDetail, quest);
+    }
+  // Only re-select when onboarding completes or profile changes — not on every score update
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasCompletedOnboarding, userProfile]);
 
   useEffect(() => {
     if (!summary.isFaithfulDay) return;
@@ -404,6 +443,33 @@ export default function Home() {
   const handleUpdateProfile = (profile: UserProfile) => {
     saveUserProfile(profile);
     setUserProfile(profile);
+  };
+
+  const handleStartQuest = () => {
+    startQuest();
+    const updated = loadDailyQuest();
+    if (updated) setDailyQuest(updated);
+  };
+
+  const handleCompleteQuest = () => {
+    completeQuest();
+    const updated = loadDailyQuest();
+    if (updated) {
+      setDailyQuest(updated);
+      const qd = getQuestById(updated.questId);
+      if (qd) {
+        setQuestBonusCategory(qd.category);
+        const stats = loadGameStats();
+        saveGameStats({ ...stats, totalXP: stats.totalXP + qd.pointsReward });
+        setRawStats(loadGameStats());
+      }
+    }
+  };
+
+  const handleSkipQuest = () => {
+    skipQuest();
+    const updated = loadDailyQuest();
+    if (updated) setDailyQuest(updated);
   };
 
   const resetOnboarding = () => {
@@ -747,7 +813,20 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* 5. Daily Intention Card */}
+                  {/* 5. Daily Quest */}
+                  {dailyQuest && getQuestById(dailyQuest.questId) && (
+                    <div className="mt-5 w-full">
+                      <DailyQuestCard
+                        quest={getQuestById(dailyQuest.questId)!}
+                        dailyQuest={dailyQuest}
+                        onStart={handleStartQuest}
+                        onComplete={handleCompleteQuest}
+                        onSkip={handleSkipQuest}
+                      />
+                    </div>
+                  )}
+
+                  {/* 6. Daily Intention Card */}
                   <div className="mt-5 w-full">
                     <DailyIntentionCard
                       intentions={intentions.intentions}

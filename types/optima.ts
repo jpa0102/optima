@@ -153,6 +153,39 @@ export type ScoreSummary = {
   isFaithfulDay: boolean;
 };
 
+export type QuestCategory = Category;
+
+export type QuestDifficulty = "gentle" | "moderate" | "challenging";
+
+export type Quest = {
+  id: string;
+  title: string;
+  description: string;
+  category: QuestCategory;
+  difficulty: QuestDifficulty;
+  scriptureRef: string;
+  scriptureText: string;
+  forStruggles?: CurrentStruggle[];
+  forLifeSeasons?: LifeSeason[];
+  forFaithStages?: FaithStage[];
+  forWorkSituations?: WorkSituation[];
+  forHealthConsiderations?: HealthConsideration[];
+  steps?: string[];
+  estimatedMinutes: number;
+  pointsReward: number;
+  startMessage: string;
+  completionMessage: string;
+  reminderMessage: string;
+};
+
+export type DailyQuest = {
+  date: string;
+  questId: string;
+  startedAt?: string;
+  completedAt?: string;
+  status: "available" | "in_progress" | "completed" | "skipped";
+};
+
 export type DailyRecord = {
   date: string;
   dateLabel: string;
