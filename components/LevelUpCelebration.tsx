@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Companion } from "@/components/Companion";
+import { MINOR_LEVEL_SCRIPTURES, ROMAN_NUMERALS } from "@/lib/gamification";
 import type { Level } from "@/types/optima";
 
 type Props = {
@@ -12,14 +14,76 @@ type Props = {
 
 const PARTICLES = [
   { dx: -18, dy: -36, delay: 0 },
-  { dx: 20, dy: -44, delay: 0.15 },
-  { dx: -8, dy: -52, delay: 0.3 },
-  { dx: 30, dy: -30, delay: 0.1 },
+  { dx: 20,  dy: -44, delay: 0.15 },
+  { dx: -8,  dy: -52, delay: 0.3 },
+  { dx: 30,  dy: -30, delay: 0.1 },
   { dx: -32, dy: -28, delay: 0.25 },
-  { dx: 8, dy: -56, delay: 0.45 },
+  { dx: 8,   dy: -56, delay: 0.45 },
 ];
 
 export function LevelUpCelebration({ oldLevel, newLevel, onClose }: Props) {
+  const [minorScripture] = useState(
+    () => MINOR_LEVEL_SCRIPTURES[Math.floor(Math.random() * MINOR_LEVEL_SCRIPTURES.length)],
+  );
+
+  // Auto-dismiss minor level-ups after 5 seconds
+  useEffect(() => {
+    if (newLevel.isStageStart) return;
+    const timer = setTimeout(onClose, 5000);
+    return () => clearTimeout(timer);
+  }, [newLevel.isStageStart, onClose]);
+
+  if (!newLevel.isStageStart) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 80 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 80 }}
+        transition={{ type: "spring", stiffness: 260, damping: 28 }}
+        className="fixed inset-x-0 bottom-0 z-[100] flex justify-center px-4 pb-8"
+      >
+        <div
+          className="w-full max-w-sm rounded-[2rem] border-2 bg-white p-6 shadow-2xl"
+          style={{
+            borderColor: `${newLevel.color}40`,
+            boxShadow: `0 -4px 40px ${newLevel.color}30`,
+          }}
+        >
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p
+                className="text-[10px] font-black uppercase tracking-[0.3em]"
+                style={{ color: newLevel.color }}
+              >
+                ✦ Level up
+              </p>
+              <p className="mt-1 font-serif text-2xl font-black text-stone-900">
+                {newLevel.title}
+              </p>
+              <p className="text-xs text-stone-400">Lv.{newLevel.tier}</p>
+            </div>
+            <Companion mood="Flourishing" size="sm" />
+          </div>
+
+          <p className="mt-4 font-serif text-sm italic leading-6 text-stone-600">
+            &ldquo;{minorScripture.text}&rdquo;
+          </p>
+          <p className="mt-1 text-[10px] text-stone-400">— {minorScripture.ref}</p>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="mt-4 w-full rounded-full py-3 text-sm font-black text-white transition"
+            style={{ backgroundColor: newLevel.color }}
+          >
+            Keep going ✦
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // Major level-up — full screen grand celebration
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -41,7 +105,7 @@ export function LevelUpCelebration({ oldLevel, newLevel, onClose }: Props) {
       </motion.div>
 
       <div className="relative flex w-full max-w-sm flex-col items-center">
-        {/* Opti with floating particles above */}
+        {/* Opti with floating particles */}
         <div className="relative">
           {PARTICLES.map((p, i) => (
             <motion.div
@@ -49,10 +113,7 @@ export function LevelUpCelebration({ oldLevel, newLevel, onClose }: Props) {
               className="absolute left-1/2 top-0 h-2.5 w-2.5 rounded-full"
               style={{ backgroundColor: newLevel.color, marginLeft: p.dx }}
               initial={{ y: 0, opacity: 0 }}
-              animate={{
-                y: [0, p.dy - 10, p.dy],
-                opacity: [0, 1, 0],
-              }}
+              animate={{ y: [0, p.dy - 10, p.dy], opacity: [0, 1, 0] }}
               transition={{
                 delay: p.delay,
                 duration: 1.8,
@@ -78,7 +139,7 @@ export function LevelUpCelebration({ oldLevel, newLevel, onClose }: Props) {
           className="mb-4 mt-4 text-[10px] font-black uppercase tracking-[0.4em]"
           style={{ color: newLevel.color }}
         >
-          ✦ You&apos;ve grown ✦
+          ✦ New stage reached ✦
         </motion.p>
 
         {/* Level transition */}
@@ -89,7 +150,7 @@ export function LevelUpCelebration({ oldLevel, newLevel, onClose }: Props) {
           className="flex flex-col items-center"
         >
           <p className="text-sm text-stone-400 line-through opacity-50">
-            Lv.{oldLevel.tier} · {oldLevel.title}
+            {oldLevel.stageName} · {ROMAN_NUMERALS[oldLevel.subLevel - 1]}
           </p>
           <motion.p
             initial={{ opacity: 0 }}
@@ -113,7 +174,7 @@ export function LevelUpCelebration({ oldLevel, newLevel, onClose }: Props) {
               className="font-serif text-5xl font-black leading-tight"
               style={{ color: newLevel.color }}
             >
-              {newLevel.title}
+              {newLevel.stageName}
             </p>
           </motion.div>
         </motion.div>

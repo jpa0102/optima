@@ -24,9 +24,11 @@ import { categoryEmoji } from "@/lib/categoryConfig";
 import { categories, habits } from "@/data/habits";
 import {
   addXP,
+  awardCheckInXP,
   awardXP,
   getGameStats,
   loadGameStats,
+  ROMAN_NUMERALS,
   saveGameStats,
   updateStreak,
 } from "@/lib/gamification";
@@ -68,7 +70,9 @@ import { STRUGGLE_LABELS } from "@/lib/userProfile";
 import {
   NOTIF_PERMISSION_KEY,
   canNotify,
+  clearScheduledDailyReminders,
   requestNotificationPermission,
+  scheduleDailyReminders,
   scheduleQuestReminders,
   scheduleReminderNotification,
 } from "@/lib/notifications";
@@ -423,6 +427,30 @@ export default function Home() {
       localStorage.setItem(key, "true");
     }
   }, [summary.isFaithfulDay, hasCompletedOnboarding]);
+
+  // Award XP when a pillar check-in session completes (deduplication prevents double-awarding)
+  useEffect(() => {
+    if (checkInView !== "complete" || !hasCompletedOnboarding) return;
+    const xpResult = awardCheckInXP(summary);
+    setRawStats(loadGameStats());
+    if (xpResult.leveledUp) {
+      setLevelUpData({ old: xpResult.oldLevel, new: xpResult.newLevel });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkInView]);
+
+  // Reschedule daily reminders whenever quest/habits/faithful status changes
+  useEffect(() => {
+    if (!hasCompletedOnboarding || !canNotify()) return;
+    const questDetail = dailyQuest ? getQuestById(dailyQuest.questId) ?? null : null;
+    scheduleDailyReminders(
+      questDetail,
+      dailyQuest?.status ?? "available",
+      selectedHabitIds.length,
+      summary.isFaithfulDay,
+    );
+    return () => { clearScheduledDailyReminders(); };
+  }, [dailyQuest, selectedHabitIds.length, summary.isFaithfulDay, hasCompletedOnboarding]);
 
   const gameStats = useMemo(
     () => getGameStats(rawStats.totalXP, rawStats.streak, rawStats.longestStreak, rawStats.lastCheckinDate),
@@ -924,13 +952,13 @@ export default function Home() {
                     <span className="text-stone-300 dark:text-white/20">·</span>
                     <span className="flex items-center gap-1">
                       <span
-                        className="rounded-full px-1.5 py-0.5 text-[9px] font-black text-white"
-                        style={{ backgroundColor: gameStats.level.color }}
+                        className="rounded-full px-2 py-0.5 text-[10px] font-bold"
+                        style={{ backgroundColor: `${gameStats.level.color}1a`, color: gameStats.level.color }}
                       >
                         Lv.{gameStats.level.tier}
                       </span>
                       <span className="text-[10px] font-semibold" style={{ color: gameStats.level.color }}>
-                        {gameStats.level.title}
+                        {gameStats.level.stageName} {ROMAN_NUMERALS[gameStats.level.subLevel - 1]}
                       </span>
                     </span>
                   </div>
@@ -1355,24 +1383,29 @@ export default function Home() {
                     Lv.{gameStats.level.tier}
                   </span>
                   <span className="text-[0.6rem] font-bold" style={{ color: gameStats.level.color }}>
-                    {gameStats.level.title}
+                    {gameStats.level.stageName} · {ROMAN_NUMERALS[gameStats.level.subLevel - 1]}
                   </span>
                 </div>
               </div>
 
               <div className="rounded-2xl border border-stone-100 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none">
-                <div className="mb-1 flex items-center justify-between">
-                  <span className="text-xs font-bold" style={{ color: gameStats.level.color }}>
-                    {gameStats.level.title}
+                {/* Level title */}
+                <div className="mb-1 flex items-end gap-2">
+                  <span className="font-serif text-3xl font-black leading-none" style={{ color: gameStats.level.color }}>
+                    Lv.{gameStats.level.tier}
                   </span>
-                  <span className="text-xs text-stone-400 dark:text-white/40">
-                    {gameStats.xpToNextLevel > 0 ? `${gameStats.xpToNextLevel} XP to next level` : "Max level"}
-                  </span>
+                  <div className="pb-0.5">
+                    <p className="text-xs font-bold leading-tight" style={{ color: gameStats.level.color }}>
+                      {gameStats.level.stageName} · {ROMAN_NUMERALS[gameStats.level.subLevel - 1]}
+                    </p>
+                    <p className="text-[10px] italic text-stone-400 leading-tight">
+                      {gameStats.level.fullTitle.split(" — ")[1]}
+                    </p>
+                  </div>
                 </div>
-                <p className="mb-3 font-serif text-[11px] italic text-stone-500">
-                  &ldquo;{gameStats.level.description}&rdquo;
-                </p>
-                <div className="h-2.5 w-full overflow-hidden rounded-full bg-stone-100 dark:bg-white/10">
+
+                {/* Progress bar */}
+                <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-stone-100 dark:bg-white/10">
                   <motion.div
                     className="h-full rounded-full"
                     style={{ backgroundColor: gameStats.level.color, boxShadow: `0 0 12px ${gameStats.level.color}88` }}
@@ -1381,7 +1414,37 @@ export default function Home() {
                     transition={{ type: "spring", stiffness: 55, damping: 13, delay: 0.2 }}
                   />
                 </div>
-                <p className="mt-2 text-[10px] italic text-stone-400 text-center">
+                <p className="mt-1 text-xs text-stone-400 dark:text-white/40">
+                  {gameStats.xpToNextLevel > 0 ? `${gameStats.xpToNextLevel} XP to next level` : "Max level reached"}
+                </p>
+
+                {/* Stage progress dots */}
+                <div className="mt-4 flex items-center justify-center gap-2">
+                  {[1, 2, 3, 4, 5].map((sub) => {
+                    const isPast = sub < gameStats.level.subLevel;
+                    const isCurrent = sub === gameStats.level.subLevel;
+                    return (
+                      <motion.span
+                        key={sub}
+                        className="rounded-full"
+                        style={{
+                          width: isCurrent ? 10 : 8,
+                          height: isCurrent ? 10 : 8,
+                          backgroundColor: isPast || isCurrent ? gameStats.level.color : "#e7e5e4",
+                          boxShadow: isCurrent ? `0 0 8px ${gameStats.level.color}` : undefined,
+                        }}
+                        animate={isCurrent ? { scale: [1, 1.25, 1] } : {}}
+                        transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+                      />
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-center text-[10px] text-stone-400">
+                  Stage {gameStats.level.stage} of 10 — {gameStats.level.stageName}
+                </p>
+
+                {/* Scripture */}
+                <p className="mt-3 text-center font-serif text-[10px] italic leading-5 text-stone-400">
                   {gameStats.level.scripture}
                 </p>
               </div>

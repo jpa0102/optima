@@ -221,12 +221,17 @@ export type AppTab = "home" | "check-in" | "history";
 
 export type Level = {
   tier: number;
+  stage: number;
+  stageName: string;
+  subLevel: number;
   title: string;
+  fullTitle: string;
   minXP: number;
   maxXP: number;
   color: string;
   description: string;
   scripture: string;
+  isStageStart: boolean;
 };
 
 export type GameStats = {
